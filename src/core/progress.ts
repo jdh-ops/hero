@@ -93,6 +93,9 @@ export function dropTableFor(run: RunConfig): DropTable {
     gemChance: m.gemChance,
     // 티어가 오를수록 희귀 젬 비율 상승
     gemRarity: { ...m.gemRarity, rare: m.gemRarity.rare + m.perTier.gemRare * t },
+    currencyChance: m.currencyChance,
+    currencyRarity: { ...m.currencyRarity, rare: m.currencyRarity.rare + m.perTier.currencyRare * t },
+    goldPerLevel: m.goldPerLevel,
   };
 }
 
@@ -106,10 +109,11 @@ export function bossDropTableFor(run: RunConfig): BossDropTable {
     itemRarity: { ...m.itemRarity, rare: m.itemRarity.rare + m.perTier.rare * t },
     gemChance: m.gemChance,
     gemRarity: { ...m.gemRarity, rare: m.gemRarity.rare + m.perTier.gemRare * t },
+    currency: { ...m.currency, gold: m.currency.gold + 60 * t },
   };
 }
 
-function pickWeighted<K extends string>(weights: Record<K, number>, rng: Rng): K {
+export function pickWeighted<K extends string>(weights: Record<K, number>, rng: Rng): K {
   const entries = Object.entries(weights) as [K, number][];
   let r = rng() * entries.reduce((s, [, w]) => s + w, 0);
   for (const [k, w] of entries) {

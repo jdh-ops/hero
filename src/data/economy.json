@@ -1,0 +1,140 @@
+{
+ "chances": [
+  1.0,
+  0.95,
+  0.9,
+  0.8,
+  0.7,
+  0.6,
+  0.5,
+  0.4,
+  0.3,
+  0.2
+ ],
+ "failBonus": 0.05,
+ "crystalBonus": 0.25,
+ "item": {
+  "perLevel": 0.06,
+  "stone": [
+   1,
+   1,
+   2,
+   2,
+   3,
+   3,
+   4,
+   5,
+   6,
+   8
+  ],
+  "gold": [
+   20,
+   40,
+   60,
+   90,
+   120,
+   160,
+   200,
+   260,
+   330,
+   420
+  ]
+ },
+ "skill": {
+  "perLevel": 0.06,
+  "essence": [
+   1,
+   1,
+   2,
+   2,
+   3,
+   3,
+   4,
+   5,
+   6,
+   8
+  ],
+  "gold": [
+   50,
+   80,
+   120,
+   160,
+   210,
+   270,
+   340,
+   420,
+   510,
+   620
+  ]
+ },
+ "salvage": {
+  "item": {
+   "normal": {
+    "gold": 5,
+    "stone": 1
+   },
+   "magic": {
+    "gold": 12,
+    "stone": 2
+   },
+   "rare": {
+    "gold": 30,
+    "stone": 4,
+    "essenceChance": 0.3
+   }
+  },
+  "gem": {
+   "common": {
+    "essence": 1
+   },
+   "uncommon": {
+    "essence": 3
+   },
+   "rare": {
+    "essence": 8
+   }
+  }
+ },
+ "shop": [
+  {
+   "id": "magic_box",
+   "name": "마법 장비 상자",
+   "description": "내 레벨의 마법 장비 1개",
+   "gold": [
+    100,
+    25
+   ]
+  },
+  {
+   "id": "rare_box",
+   "name": "희귀 장비 상자",
+   "description": "내 레벨의 희귀 장비 1개",
+   "gold": [
+    400,
+    60
+   ]
+  },
+  {
+   "id": "common_gem",
+   "name": "일반 보조 젬",
+   "description": "무작위 보조 젬(일반) 1개",
+   "gold": [
+    300,
+    0
+   ]
+  },
+  {
+   "id": "stone",
+   "name": "강화석",
+   "description": "강화석 1개",
+   "gold": [
+    60,
+    0
+   ]
+  }
+ ],
+ "respec": {
+  "goldPerLevel": 30
+ },
+ "mappingUnlockMaps": 3
+}

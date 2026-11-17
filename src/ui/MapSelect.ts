@@ -5,7 +5,7 @@ import {
   areaLevel, canStart, dropTableFor, mappingUnlocked, maxMappingTier, newMappingRun, storyUnlocked, xpToNext,
   type RunConfig, type StoryDifficulty,
 } from '../core/progress';
-import { MAPS, MONSTERS } from '../data';
+import { CURRENCIES, MAPS, MONSTERS } from '../data';
 
 const ELEMENT_KO = { physical: '물리', fire: '화염', cold: '냉기', lightning: '번개' } as const;
 
@@ -47,7 +47,14 @@ export class MapSelectUI {
         const run: RunConfig = this.tab === 'mapping'
           ? newMappingRun(d.map!, this.tier)
           : { mode: 'story', difficulty: this.tab, mapIndex: Number(d.index) };
-        if (canStart(this.getBuild().progress, run)) this.onStart(run);
+        const b = this.getBuild();
+        if (!canStart(b.progress, run)) return;
+        // 맵핑은 균열 지도 1장
+        if (run.mode === 'mapping') {
+          if ((b.wallet.rift_map ?? 0) < 1) return;
+          b.wallet.rift_map--;
+        }
+        this.onStart(run);
         return;
       }
     }
@@ -69,7 +76,9 @@ export class MapSelectUI {
       body = `<div class="tier"><button type="button" data-act="tier" data-delta="-1" ${this.tier <= 1 ? 'disabled' : ''}>−</button>
         <b>${this.tier}티어</b><button type="button" data-act="tier" data-delta="1" ${this.tier >= max ? 'disabled' : ''}>+</button>
         <span class="dim">도전 가능 최고 ${max}티어 · 맵을 깨면 다음 티어가 열립니다<br>보스는 지역마다 고정, 일반 몹 속성은 입장할 때 무작위</span></div>`;
-      body += this.cards((i) => ({ mode: 'mapping', mapId: MAPS.maps[i].id, tier: this.tier }), () => true, () => false);
+      const maps = b.wallet.rift_map ?? 0;
+      body += `<p class="dim">입장할 때 균열 지도 1장 사용 · 보유 ${maps}장${maps ? '' : ' (지옥·맵핑 보스와 몬스터가 떨어뜨림)'}</p>`;
+      body += this.cards((i) => ({ mode: 'mapping', mapId: MAPS.maps[i].id, tier: this.tier }), () => maps > 0, () => false);
     } else {
       const diff = this.tab;
       body = this.cards(
@@ -83,8 +92,9 @@ export class MapSelectUI {
       <header>
         <h2>지도</h2>
         <div class="lv"><span>Lv.${b.level}</span><span class="xp"><i style="width:${xpPct}%"></i></span></div>
-        <button type="button" data-act="inv">가방·스킬</button>
+        <button type="button" data-act="inv">가방·스킬·상점</button>
       </header>
+      <div class="wallet">${Object.values(CURRENCIES).map((c) => `<span class="cur" style="--c:#${Number(c.color).toString(16).padStart(6, '0')}">${c.name} <b>${b.wallet[c.id] ?? 0}</b></span>`).join('')}</div>
       <nav class="maps-tabs">${tabs}</nav>
       ${body}`;
   }

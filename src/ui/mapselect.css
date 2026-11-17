@@ -91,3 +91,6 @@
 }
 .clear-banner b { font-size: 22px; color: #ffd54f; }
 .clear-banner button { border: 1px solid var(--inv-accent); border-radius: 8px; background: var(--inv-accent); color: #fff; padding: 9px 18px; font: 700 15px system-ui, sans-serif; cursor: pointer; }
+.maps .wallet { display: flex; flex-wrap: wrap; gap: 6px 12px; font-size: 12px; color: var(--inv-dim); }
+.maps .dim { color: var(--inv-dim); font-size: 12px; margin: 0; }
+.clear-banner .gains { font-size: 13px; color: var(--inv-dim); max-width: 280px; }

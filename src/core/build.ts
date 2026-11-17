@@ -5,6 +5,8 @@ import { itemMods, makeItem, type Item, type Slot } from './items';
 import { SUPPORT_SOCKETS, canSupport, resolveSkill, type ActiveSkill } from './skills';
 import type { Mod } from './types';
 import { levelMods, newProgress, type Progress } from './progress';
+import { talentMods, type TalentRanks } from './talents';
+import type { Wallet } from './economy';
 import { CLASSES, SKILLS, type ClassDef } from '../data';
 import { gemKey, migrateGemKey, parseGem } from './gems';
 
@@ -23,6 +25,12 @@ export interface Build {
   level: number;
   xp: number;
   progress: Progress;
+  /** 재화 */
+  wallet: Wallet;
+  /** 특성 랭크 */
+  talents: TalentRanks;
+  /** 스킬 강화 단계와 연속 실패 수 */
+  skillEnhance: Record<string, { level: number; fails: number }>;
 }
 
 export interface SaveData extends Build {
@@ -40,6 +48,9 @@ export function newBuild(classId = 'warrior'): Build {
     level: 1,
     xp: 0,
     progress: newProgress(),
+    wallet: { gold: 0 },
+    talents: {},
+    skillEnhance: {},
   };
 }
 
@@ -49,7 +60,7 @@ export function classOf(build: Build): ClassDef {
 
 /** 직업 + 장비 수정치 */
 export function baseMods(build: Build, equipment = build.equipment): Mod[] {
-  const mods = [...classOf(build).mods, ...levelMods(build.level)];
+  const mods = [...classOf(build).mods, ...levelMods(build.level), ...talentMods(build.talents)];
   for (const item of Object.values(equipment)) if (item) mods.push(...itemMods(item));
   return mods;
 }
@@ -70,7 +81,7 @@ export function activeSkills(build: Build, equipment = build.equipment): ActiveS
   const mods = baseMods(build, equipment);
   return classOf(build).skills.map((id) => {
     const keys = socketsOf(build, id).filter((g): g is string => !!g);
-    return resolveSkill(SKILLS[id], keys, mods);
+    return resolveSkill(SKILLS[id], keys, mods, build.skillEnhance[id]?.level ?? 0);
   });
 }
 
@@ -214,6 +225,10 @@ export function loadBuild(): Build {
           level: data.level ?? 1,
           xp: data.xp ?? 0,
           progress: { ...newProgress(), ...data.progress, story: { ...newProgress().story, ...data.progress?.story } },
+          // 6단계 이전 세이브에는 없음
+          wallet: data.wallet ?? { gold: 0 },
+          talents: data.talents ?? {},
+          skillEnhance: data.skillEnhance ?? {},
         };
       }
     }

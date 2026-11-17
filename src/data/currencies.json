@@ -1,0 +1,37 @@
+{
+ "gold": {
+  "id": "gold",
+  "name": "금화",
+  "rarity": "common",
+  "color": "0xffca28",
+  "description": "상점, 강화 비용, 특성 초기화에 씁니다. 몬스터를 잡으면 자동으로 들어옵니다."
+ },
+ "stone": {
+  "id": "stone",
+  "name": "강화석",
+  "rarity": "common",
+  "color": "0xb0bec5",
+  "description": "장비 강화 재료."
+ },
+ "essence": {
+  "id": "essence",
+  "name": "스킬 정수",
+  "rarity": "uncommon",
+  "color": "0x7aa7ff",
+  "description": "스킬 강화 재료."
+ },
+ "rift_map": {
+  "id": "rift_map",
+  "name": "균열 지도",
+  "rarity": "uncommon",
+  "color": "0x26c6da",
+  "description": "맵핑 입장에 1장 씁니다."
+ },
+ "crystal": {
+  "id": "crystal",
+  "name": "축복의 결정",
+  "rarity": "rare",
+  "color": "0xffd54f",
+  "description": "강화할 때 함께 쓰면 성공 확률 +25%."
+ }
+}

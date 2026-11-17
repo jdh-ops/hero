@@ -1,0 +1,396 @@
+{
+ "branches": [
+  {
+   "id": "warrior",
+   "name": "투사",
+   "description": "힘 · 생명력 · 근접"
+  },
+  {
+   "id": "hunter",
+   "name": "사냥꾼",
+   "description": "민첩 · 속도 · 치명타 · 투사체"
+  },
+  {
+   "id": "sage",
+   "name": "현자",
+   "description": "지능 · 보호막 · 원소"
+  }
+ ],
+ "tierPoints": [
+  0,
+  5,
+  10
+ ],
+ "talents": [
+  {
+   "id": "w_life",
+   "branch": "warrior",
+   "tier": 0,
+   "name": "강인함",
+   "maxRank": 5,
+   "mods": [
+    {
+     "kind": "flat",
+     "stat": "maxLife",
+     "value": 12
+    }
+   ],
+   "description": "최대 생명력 +12"
+  },
+  {
+   "id": "w_phys",
+   "branch": "warrior",
+   "tier": 0,
+   "name": "무기 숙련",
+   "maxRank": 5,
+   "mods": [
+    {
+     "kind": "inc",
+     "tag": "physical",
+     "value": 0.06
+    }
+   ],
+   "description": "물리 피해 +6%"
+  },
+  {
+   "id": "w_armor",
+   "branch": "warrior",
+   "tier": 0,
+   "name": "단련된 몸",
+   "maxRank": 5,
+   "mods": [
+    {
+     "kind": "flat",
+     "stat": "armor",
+     "value": 40
+    }
+   ],
+   "description": "방어도 +40"
+  },
+  {
+   "id": "w_str",
+   "branch": "warrior",
+   "tier": 1,
+   "name": "괴력",
+   "maxRank": 3,
+   "mods": [
+    {
+     "kind": "flat",
+     "stat": "str",
+     "value": 5
+    }
+   ],
+   "description": "힘 +5"
+  },
+  {
+   "id": "w_melee",
+   "branch": "warrior",
+   "tier": 1,
+   "name": "근접 전투",
+   "maxRank": 5,
+   "mods": [
+    {
+     "kind": "inc",
+     "tag": "melee",
+     "value": 0.08
+    }
+   ],
+   "description": "근접 피해 +8%"
+  },
+  {
+   "id": "w_regen",
+   "branch": "warrior",
+   "tier": 1,
+   "name": "회복력",
+   "maxRank": 3,
+   "mods": [
+    {
+     "kind": "flat",
+     "stat": "lifeRegen",
+     "value": 1.5
+    }
+   ],
+   "description": "초당 생명력 재생 +1.5"
+  },
+  {
+   "id": "w_key",
+   "branch": "warrior",
+   "tier": 2,
+   "name": "불굴",
+   "maxRank": 1,
+   "mods": [
+    {
+     "kind": "more",
+     "tag": "melee",
+     "value": 0.15
+    },
+    {
+     "kind": "flat",
+     "stat": "armor",
+     "value": 150
+    }
+   ],
+   "description": "근접 피해 추가 15%, 방어도 +150"
+  },
+  {
+   "id": "h_eva",
+   "branch": "hunter",
+   "tier": 0,
+   "name": "날렵함",
+   "maxRank": 5,
+   "mods": [
+    {
+     "kind": "flat",
+     "stat": "evasion",
+     "value": 40
+    }
+   ],
+   "description": "회피 +40"
+  },
+  {
+   "id": "h_speed",
+   "branch": "hunter",
+   "tier": 0,
+   "name": "민첩한 손",
+   "maxRank": 5,
+   "mods": [
+    {
+     "kind": "flat",
+     "stat": "actionSpeed",
+     "value": 0.03
+    }
+   ],
+   "description": "행동 속도 +3%"
+  },
+  {
+   "id": "h_crit",
+   "branch": "hunter",
+   "tier": 0,
+   "name": "급소 노리기",
+   "maxRank": 5,
+   "mods": [
+    {
+     "kind": "flat",
+     "stat": "critChance",
+     "value": 0.01
+    }
+   ],
+   "description": "치명타 확률 +1%"
+  },
+  {
+   "id": "h_dex",
+   "branch": "hunter",
+   "tier": 1,
+   "name": "재빠름",
+   "maxRank": 3,
+   "mods": [
+    {
+     "kind": "flat",
+     "stat": "dex",
+     "value": 5
+    }
+   ],
+   "description": "민첩 +5"
+  },
+  {
+   "id": "h_critdmg",
+   "branch": "hunter",
+   "tier": 1,
+   "name": "잔인한 일격",
+   "maxRank": 5,
+   "mods": [
+    {
+     "kind": "flat",
+     "stat": "critMulti",
+     "value": 0.1
+    }
+   ],
+   "description": "치명타 피해 +10%"
+  },
+  {
+   "id": "h_proj",
+   "branch": "hunter",
+   "tier": 1,
+   "name": "투척 숙련",
+   "maxRank": 5,
+   "mods": [
+    {
+     "kind": "inc",
+     "tag": "projectile",
+     "value": 0.08
+    }
+   ],
+   "description": "투사체 피해 +8%"
+  },
+  {
+   "id": "h_move",
+   "branch": "hunter",
+   "tier": 1,
+   "name": "질주",
+   "maxRank": 3,
+   "mods": [
+    {
+     "kind": "flat",
+     "stat": "moveSpeedInc",
+     "value": 0.04
+    }
+   ],
+   "description": "이동 속도 +4%"
+  },
+  {
+   "id": "h_key",
+   "branch": "hunter",
+   "tier": 2,
+   "name": "사냥꾼의 눈",
+   "maxRank": 1,
+   "mods": [
+    {
+     "kind": "more",
+     "tag": "projectile",
+     "value": 0.15
+    },
+    {
+     "kind": "flat",
+     "stat": "critChance",
+     "value": 0.03
+    }
+   ],
+   "description": "투사체 피해 추가 15%, 치명타 확률 +3%"
+  },
+  {
+   "id": "s_shield",
+   "branch": "sage",
+   "tier": 0,
+   "name": "마력 보호막",
+   "maxRank": 5,
+   "mods": [
+    {
+     "kind": "flat",
+     "stat": "maxShield",
+     "value": 15
+    }
+   ],
+   "description": "최대 보호막 +15"
+  },
+  {
+   "id": "s_mana",
+   "branch": "sage",
+   "tier": 0,
+   "name": "깊은 마력",
+   "maxRank": 5,
+   "mods": [
+    {
+     "kind": "flat",
+     "stat": "maxMana",
+     "value": 10
+    }
+   ],
+   "description": "최대 마나 +10"
+  },
+  {
+   "id": "s_res",
+   "branch": "sage",
+   "tier": 0,
+   "name": "원소 수호",
+   "maxRank": 5,
+   "mods": [
+    {
+     "kind": "flat",
+     "stat": "resFire",
+     "value": 0.04
+    },
+    {
+     "kind": "flat",
+     "stat": "resCold",
+     "value": 0.04
+    },
+    {
+     "kind": "flat",
+     "stat": "resLightning",
+     "value": 0.04
+    }
+   ],
+   "description": "화염·냉기·번개 저항 +4%"
+  },
+  {
+   "id": "s_int",
+   "branch": "sage",
+   "tier": 1,
+   "name": "총명함",
+   "maxRank": 3,
+   "mods": [
+    {
+     "kind": "flat",
+     "stat": "int",
+     "value": 5
+    }
+   ],
+   "description": "지능 +5"
+  },
+  {
+   "id": "s_elem",
+   "branch": "sage",
+   "tier": 1,
+   "name": "원소 숙련",
+   "maxRank": 5,
+   "mods": [
+    {
+     "kind": "inc",
+     "tag": "elemental",
+     "value": 0.08
+    }
+   ],
+   "description": "원소 피해 +8%"
+  },
+  {
+   "id": "s_manareg",
+   "branch": "sage",
+   "tier": 1,
+   "name": "명상",
+   "maxRank": 3,
+   "mods": [
+    {
+     "kind": "flat",
+     "stat": "manaRegen",
+     "value": 1
+    }
+   ],
+   "description": "초당 마나 재생 +1"
+  },
+  {
+   "id": "s_area",
+   "branch": "sage",
+   "tier": 1,
+   "name": "넓은 영역",
+   "maxRank": 5,
+   "mods": [
+    {
+     "kind": "inc",
+     "tag": "area",
+     "value": 0.06
+    }
+   ],
+   "description": "범위 피해 +6%"
+  },
+  {
+   "id": "s_key",
+   "branch": "sage",
+   "tier": 2,
+   "name": "원소의 지배자",
+   "maxRank": 1,
+   "mods": [
+    {
+     "kind": "more",
+     "tag": "elemental",
+     "value": 0.15
+    },
+    {
+     "kind": "more",
+     "tag": "sustained",
+     "value": 0.15
+    }
+   ],
+   "description": "원소 피해 추가 15%, 지속 피해 추가 15%"
+  }
+ ]
+}

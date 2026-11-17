@@ -15,6 +15,9 @@ import {
   type RunConfig,
 } from '../core/progress';
 import { GEM_RARITIES, GEM_RARITY_COLOR, gemKey, gemName, parseGem } from '../core/gems';
+import { formatCost, gain, rollBossCurrency, rollCurrency, rollGold, type Wallet } from '../core/economy';
+import { mappingUnlocked } from '../core/progress';
+import { CURRENCIES, ECONOMY } from '../data';
 import { Joystick } from '../ui/Joystick';
 import { InventoryUI } from '../ui/Inventory';
 import { MapSelectUI } from '../ui/MapSelect';
@@ -55,7 +58,7 @@ class Monster extends Phaser.Physics.Arcade.Image {
 }
 
 interface FloatText { text: Phaser.GameObjects.Text; life: number; vy: number }
-interface Drop { item?: Item; gemId?: string; gem: Phaser.GameObjects.Shape; label: Phaser.GameObjects.Text }
+interface Drop { item?: Item; gemId?: string; currency?: { id: string; n: number }; gem: Phaser.GameObjects.Shape; label: Phaser.GameObjects.Text }
 interface Projectile { img: Phaser.GameObjects.Arc; vx: number; vy: number; travelled: number; maxDist: number; pierce: number; hit: Set<Monster>; skill: ActiveSkill }
 interface Ground { x: number; y: number; r: number; left: number; tick: number; gfx: Phaser.GameObjects.Arc; skill: ActiveSkill }
 interface EnemyShot { img: Phaser.GameObjects.Arc; vx: number; vy: number; left: number; hit: Hit }
@@ -71,6 +74,8 @@ export class GameScene extends Phaser.Scene {
   private mapSelect?: MapSelectUI;
   private domButtons: HTMLElement[] = [];
   private enemyShots: EnemyShot[] = [];
+  /** 이번 판에 얻은 재화 */
+  private runGains: Wallet = {};
   private boss: Monster | null = null;
   private bossSpawned = false;
   private bossText!: Phaser.GameObjects.Text;  private stats!: StatSheet;
@@ -137,7 +142,11 @@ export class GameScene extends Phaser.Scene {
     this.inventory = new InventoryUI(
       () => this.build,
       () => this.onBuildChanged(),
-      (open) => (open ? this.scene.pause() : this.scene.resume()),
+      (open) => {
+        if (open) this.scene.pause();
+        else { this.scene.resume(); this.mapSelect?.render(); }
+      },
+      () => !this.run,
     );
     this.events.once('shutdown', () => {
       this.inventory.destroy();
@@ -212,6 +221,7 @@ export class GameScene extends Phaser.Scene {
     this.map = this.run ? mapOf(this.run) : MAPS.maps[0];
     this.level = this.run ? areaLevel(this.run) : 1;
     this.cleared = false;
+    this.runGains = {};
     this.boss = null;
     this.bossSpawned = false;
     this.enemyShots = [];
@@ -771,12 +781,23 @@ export class GameScene extends Phaser.Scene {
         this.spawnDrop(x + Math.cos(a) * 40, y + Math.sin(a) * 40, generateItem(m.level, Math.random, rollItemRarity(bt)));
       }
       if (Math.random() < bt.gemChance) this.spawnGemDrop(x, y, rollGem(bt));
+      const bundle = rollBossCurrency(bt);
+      this.addGold(bundle.gold ?? 0);
+      let k = 0;
+      for (const [id, n] of Object.entries(bundle)) {
+        if (id === 'gold' || n <= 0) continue;
+        const a = Math.PI / 4 + (Math.PI * 2 * k++) / 4;
+        this.spawnCurrencyDrop(x + Math.cos(a) * 70, y + Math.sin(a) * 70, id, n);
+      }
       this.boss = null;
       m.destroy();
     } else {
       const table = dropTableFor(this.run);
       if (Math.random() < table.itemChance) this.spawnDrop(x, y, generateItem(m.level, Math.random, rollItemRarity(table)));
       if (Math.random() < table.gemChance) this.spawnGemDrop(x + 14, y + 6, rollGem(table));
+      this.addGold(rollGold(table, m.level));
+      const cur = rollCurrency(table);
+      if (cur) this.spawnCurrencyDrop(x - 14, y + 6, cur, 1);
     }
 
     // 경험치
@@ -796,7 +817,11 @@ export class GameScene extends Phaser.Scene {
   private checkClear(bossDown = false) {
     if (this.cleared || !this.run || !bossDown) return;
     this.cleared = true;
+    const wasMapping = mappingUnlocked(this.build.progress);
     recordClear(this.build.progress, this.run);
+    // 지옥을 다 깨서 맵핑이 처음 열리면 균열 지도 지급
+    const unlockedNow = !wasMapping && mappingUnlocked(this.build.progress);
+    if (unlockedNow) gain(this.build.wallet, { rift_map: ECONOMY.mappingUnlockMaps });
     saveBuild(this.build);
     // 남은 몬스터는 사라짐 (드랍 없음)
     for (const m of this.activeMonsters()) {
@@ -808,7 +833,10 @@ export class GameScene extends Phaser.Scene {
 
     const banner = document.createElement('div');
     banner.className = 'clear-banner';
-    banner.innerHTML = `<b>클리어!</b><span>${runName(this.run)}</span><span class="dim">떨어진 아이템을 줍고 돌아가세요</span>`;
+    banner.innerHTML = `<b>클리어!</b><span>${runName(this.run)}</span>
+      ${unlockedNow ? `<span>맵핑이 열렸습니다! 균열 지도 ${ECONOMY.mappingUnlockMaps}장을 받았습니다.</span>` : ''}
+      <span class="gains">지금까지 얻은 재화: ${formatCost(this.runGains) || '없음'}</span>
+      <span class="dim">떨어진 아이템을 줍고 돌아가세요</span>`;
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.textContent = '지도로 돌아가기';
@@ -835,6 +863,25 @@ export class GameScene extends Phaser.Scene {
   }
 
   /** gemId: "id:희귀도". 동그란 초록 젬 + 희귀도 색 테두리 */
+  /** 금화는 줍지 않아도 바로 들어옴 */
+  private addGold(n: number) {
+    if (n <= 0) return;
+    gain(this.build.wallet, { gold: n });
+    gain(this.runGains, { gold: n });
+  }
+
+  private spawnCurrencyDrop(x: number, y: number, id: string, n: number) {
+    const def = CURRENCIES[id];
+    const color = Number(def.color);
+    const gem = this.add.rectangle(x, y, 10, 10, color).setAngle(45).setStrokeStyle(2, 0xffffff, 0.8).setDepth(3);
+    const label = this.add.text(x, y - 15, n > 1 ? `${def.name} ×${n}` : def.name, {
+      fontFamily: 'system-ui, sans-serif', fontSize: '12px', color: Phaser.Display.Color.IntegerToColor(color).rgba,
+      stroke: '#000000', strokeThickness: 3,
+    }).setOrigin(0.5).setDepth(3);
+    if (def.rarity !== 'common') this.tweens.add({ targets: gem, scale: 1.4, yoyo: true, repeat: -1, duration: 450 });
+    this.drops.push({ currency: { id, n }, gem, label });
+  }
+
   private spawnGemDrop(x: number, y: number, gemId: string) {
     const rarity = parseGem(gemId)?.rarity ?? 'common';
     const color = GEM_RARITY_COLOR[rarity];
@@ -849,6 +896,16 @@ export class GameScene extends Phaser.Scene {
   private updatePickups() {
     this.drops = this.drops.filter((d) => {
       if (Phaser.Math.Distance.Between(this.player.x, this.player.y, d.gem.x, d.gem.y) > PICKUP_RADIUS) return true;
+      if (d.currency) {
+        const add = { [d.currency.id]: d.currency.n };
+        gain(this.build.wallet, add);
+        gain(this.runGains, add);
+        this.floatText(this.player.x, this.player.y - 40, formatCost(add), d.label.style.color as string);
+        d.gem.destroy();
+        d.label.destroy();
+        saveBuild(this.build);
+        return false;
+      }
       if (d.gemId) {
         pickUpGem(this.build, d.gemId);
         this.floatText(this.player.x, this.player.y - 40, `보조 젬: ${gemName(d.gemId)}`, GEM_RARITY_COLOR[parseGem(d.gemId)?.rarity ?? 'common']);
@@ -1011,7 +1068,7 @@ export class GameScene extends Phaser.Scene {
     this.infoText.setText(
       `${this.run ? runName(this.run) : ''} (Lv.${this.level})\n` +
       `${mobs}${goal}   ${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}\n` +
-      `기본공격 DPS ${expectedDps(this.stats, this.basic).toFixed(1)}`,
+      `기본공격 DPS ${expectedDps(this.stats, this.basic).toFixed(1)} · 금화 +${this.runGains.gold ?? 0}`,
     );
     // 보스 체력 바 (화면 위 가운데)
     const bw = Math.min(380, this.scale.width - 40);

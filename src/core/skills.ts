@@ -3,6 +3,7 @@ import { StatSheet } from './stats';
 import { averageHit } from './damage';
 import type { Mod, SkillDef, SupportDef } from './types';
 import { parseGem } from './gems';
+import { ECONOMY } from '../data';
 
 /** 스킬 하나에 연결할 수 있는 보조 젬 칸 수 */
 export const SUPPORT_SOCKETS = 2;
@@ -22,8 +23,10 @@ export interface ActiveSkill {
 }
 
 /** gemKeys: 끼운 보조 젬 ("id:희귀도"), baseMods: 캐릭터(직업 + 장비 + 레벨) 수정치 */
-export function resolveSkill(skill: SkillDef, gemKeys: string[], baseMods: readonly Mod[]): ActiveSkill {
+export function resolveSkill(skill: SkillDef, gemKeys: string[], baseMods: readonly Mod[], enhance = 0): ActiveSkill {
   const def: SkillDef = { ...skill, tags: [...skill.tags], gainAs: [...(skill.gainAs ?? [])] };
+  // 스킬 강화: 스킬 배율 × (1 + 6% × 단계)
+  def.effectiveness *= 1 + ECONOMY.skill.perLevel * enhance;
   const mods: Mod[] = [...baseMods];
   for (const key of gemKeys) {
     const gem = parseGem(key);

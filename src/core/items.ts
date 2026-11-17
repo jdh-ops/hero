@@ -3,6 +3,7 @@ import type { DamageType, FlatStat, Mod, Tag } from './types';
 import type { Rng } from './damage';
 import basesJson from '../data/items.json';
 import affixesJson from '../data/affixes.json';
+import { ECONOMY } from '../data';
 
 export const SLOTS = ['weapon', 'helmet', 'chest', 'boots', 'ring'] as const;
 export type Slot = (typeof SLOTS)[number];
@@ -41,6 +42,9 @@ export interface Item {
   ilvl: number;
   implicit: Mod[];
   affixes: { id: string; tier: number; mod: Mod }[];
+  /** 강화 단계 (+0 ~ +10)와 연속 실패 수 */
+  enhance?: number;
+  enhanceFails?: number;
 }
 
 export const BASES = basesJson as Record<string, ItemBase>;
@@ -115,9 +119,30 @@ export function generateItem(ilvl: number, rng: Rng = Math.random, forcedRarity?
   return makeItem(base.id, rarity, ilvl, rng);
 }
 
-export function itemMods(item: Item): Mod[] {
-  return [...item.implicit, ...item.affixes.map((a) => a.mod)];
+/** 장비 강화: 옵션 수치 전부 × (1 + 6% × 단계) */
+export function enhanceMods(mods: Mod[], level: number): Mod[] {
+  if (!level) return mods;
+  const k = 1 + ECONOMY.item.perLevel * level;
+  return mods.map((m) => {
+    switch (m.kind) {
+      case 'added': return { ...m, min: Math.round(m.min * k), max: Math.round(m.max * k) };
+      case 'flat': return { ...m, value: Math.abs(m.value) < 1 ? +(m.value * k).toFixed(3) : Math.round(m.value * k) };
+      default: return { ...m, value: +(m.value * k).toFixed(3) };
+    }
+  });
 }
+
+/** 기본 옵션 (강화 반영) */
+export const implicitMods = (item: Item) => enhanceMods(item.implicit, item.enhance ?? 0);
+/** 추가 옵션 하나 (강화 반영) */
+export const affixMod = (item: Item, i: number) => enhanceMods([item.affixes[i].mod], item.enhance ?? 0)[0];
+
+export function itemMods(item: Item): Mod[] {
+  return enhanceMods([...item.implicit, ...item.affixes.map((a) => a.mod)], item.enhance ?? 0);
+}
+
+/** 표시 이름: 강화 단계 포함 */
+export const itemTitle = (item: Item) => (item.enhance ? `+${item.enhance} ${item.name}` : item.name);
 
 // ---------- 표시 ----------
 

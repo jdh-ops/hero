@@ -45,7 +45,7 @@
   user-select: none;
 }
 .inv[hidden] { display: none; }
-.inv header { grid-column: 1 / -1; display: flex; align-items: center; gap: 12px; }
+.inv header { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
 .inv header h2 { margin: 0; font-size: 17px; }
 .inv header .hint { color: var(--inv-dim); font-size: 12px; margin-left: auto; }
 .inv button {
@@ -196,3 +196,44 @@
 .gem-socket.filled.g-common { border-color: var(--inv-normal) !important; color: var(--inv-normal) !important; }
 .gem-socket.filled.g-uncommon { border-color: var(--inv-magic) !important; color: var(--inv-magic) !important; }
 .gem-socket.filled.g-rare { border-color: var(--inv-rare) !important; color: var(--inv-rare) !important; }
+
+/* 6단계: 재화, 강화, 특성, 상점 */
+.hud-btn .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #b388ff; margin-left: 4px; }
+.inv-tabs .pts { display: inline-grid; place-items: center; min-width: 18px; height: 18px; border-radius: 9px; background: #b388ff; color: #14161c; font-size: 11px; margin-left: 4px; }
+.wallet { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 6px 12px; font-size: 12px; color: var(--inv-dim); }
+.wallet .cur { display: inline-flex; align-items: center; gap: 4px; }
+.wallet .cur::before { content: ""; width: 9px; height: 9px; border-radius: 2px; transform: rotate(45deg); background: var(--c); }
+.wallet .cur b { color: var(--inv-text); font-variant-numeric: tabular-nums; }
+.inv-msg { flex-basis: 100%; margin: 0; padding: 6px 10px; border-radius: 6px; background: #2a303d; font-size: 13px; }
+.inv h3.row { display: flex; align-items: center; gap: 8px; }
+.inv button.mini { padding: 3px 8px !important; font-size: 11px !important; }
+.inv h3.row .mini, .skill-card h4 .push { margin-left: auto; }
+.skill-card.picked { outline: 2px solid var(--inv-accent); }
+.enh { color: var(--inv-up); font-size: 13px; }
+.enh-box { display: grid; gap: 4px; font-size: 13px; }
+.enh-box p { margin: 0; }
+.chk { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--inv-dim); }
+
+.talents-wrap { grid-column: 1 / -1; }
+.talent-head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; font-size: 14px; }
+.talent-head b { color: #b388ff; font-size: 16px; }
+.branches { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 10px; }
+.inv .branch { overflow: visible; background: transparent; border: 1px solid var(--inv-line); border-radius: 8px; padding: 10px; min-width: 0; }
+.branch h3 { margin: 0 0 2px; }
+.branch p { margin: 0; }
+.branch .tier { display: grid; gap: 5px; margin-top: 10px; }
+.tier-label { font-size: 11px; color: var(--inv-dim); }
+.talent { display: grid; grid-template-columns: 1fr auto; gap: 0 8px; text-align: left; padding: 6px 8px !important; font-size: 12px !important; }
+.talent .tn { font-weight: 700; }
+.talent .tr { color: var(--inv-dim); font-variant-numeric: tabular-nums; }
+.talent .td { grid-column: 1 / -1; color: var(--inv-dim); font-size: 11px; }
+.talent.some { border-color: #8e6fd1 !important; }
+.talent.full { border-color: #b388ff !important; background: #2b2540 !important; }
+.talent.locked { opacity: 0.45; }
+.talent.key { border-width: 2px !important; }
+.shop { grid-column: 1 / -1; }
+.shop-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--inv-line); font-size: 13px; }
+
+@media (orientation: portrait) and (max-width: 700px) {
+  .branches { grid-template-columns: minmax(0, 1fr); }
+}

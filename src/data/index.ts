@@ -7,6 +7,9 @@ import monstersJson from './monsters.json';
 import supportsJson from './supports.json';
 import mapsJson from './maps.json';
 import dropsJson from './drops.json';
+import currenciesJson from './currencies.json';
+import economyJson from './economy.json';
+import talentsJson from './talents.json';
 
 export interface ClassDef {
   id: string;
@@ -61,6 +64,8 @@ export interface BossDropTable {
   itemRarity: Record<'normal' | 'magic' | 'rare', number>;
   gemChance: number;
   gemRarity: Record<GemRarity, number>;
+  /** 보스 재화: stone 은 [최소, 최대] 개수, 나머지는 기대 개수(정수 부분 확정 + 소수 부분 확률) */
+  currency: { stone: [number, number]; essence: number; rift_map: number; crystal: number; gold: number };
 }
 
 
@@ -69,6 +74,11 @@ export interface DropTable {
   itemRarity: Record<'normal' | 'magic' | 'rare', number>;
   gemChance: number;
   gemRarity: Record<GemRarity, number>;
+  /** 재화(금화 제외) 드랍 확률과 희귀도 비율 */
+  currencyChance: number;
+  currencyRarity: Record<GemRarity, number>;
+  /** 처치당 금화 = 몬스터 레벨 × [최소, 최대] */
+  goldPerLevel: [number, number];
 }
 
 export interface MapsData {
@@ -84,9 +94,59 @@ export const CLASSES = classesJson as Record<string, ClassDef>;
 export const MONSTERS = monstersJson as unknown as Record<string, MonsterDef>;
 export const MAPS = mapsJson as unknown as MapsData;
 export const DROPS = dropsJson as unknown as Record<'normal' | 'hard' | 'hell', DropTable> & {
-  mapping: DropTable & { perTier: { itemChance: number; rare: number; gemRare: number } };
+  mapping: DropTable & { perTier: { itemChance: number; rare: number; gemRare: number; currencyRare: number } };
+  /** 희귀도별 재화 종류와 가중치 */
+  currencyPool: Record<GemRarity, Record<string, number>>;
   /** 보스 전용 드랍 테이블 */
   boss: Record<'normal' | 'hard' | 'hell', BossDropTable> & {
     mapping: BossDropTable & { perTier: { rare: number; gemRare: number; extraItemEvery: number } };
   };
 };
+
+export interface CurrencyDef {
+  id: string;
+  name: string;
+  rarity: GemRarity;
+  color: string;
+  description: string;
+}
+
+export interface EconomyData {
+  /** 강화 단계별 기본 성공 확률 (+0→+1 이 [0]) */
+  chances: number[];
+  /** 실패할 때마다 다음 성공 확률에 더함 */
+  failBonus: number;
+  crystalBonus: number;
+  item: { perLevel: number; stone: number[]; gold: number[] };
+  skill: { perLevel: number; essence: number[]; gold: number[] };
+  salvage: {
+    item: Record<'normal' | 'magic' | 'rare', { gold: number; stone: number; essenceChance?: number }>;
+    gem: Record<GemRarity, { essence: number }>;
+  };
+  /** gold: [기본, 레벨당] */
+  shop: { id: string; name: string; description: string; gold: [number, number] }[];
+  respec: { goldPerLevel: number };
+  mappingUnlockMaps: number;
+}
+
+export interface TalentDef {
+  id: string;
+  branch: string;
+  tier: number;
+  name: string;
+  maxRank: number;
+  /** 1랭크당 수치 */
+  mods: Mod[];
+  description: string;
+}
+
+export interface TalentsData {
+  branches: { id: string; name: string; description: string }[];
+  /** 단계별로 그 계열에 먼저 찍어야 하는 포인트 */
+  tierPoints: number[];
+  talents: TalentDef[];
+}
+
+export const CURRENCIES = currenciesJson as unknown as Record<string, CurrencyDef>;
+export const ECONOMY = economyJson as unknown as EconomyData;
+export const TALENTS = talentsJson as unknown as TalentsData;
