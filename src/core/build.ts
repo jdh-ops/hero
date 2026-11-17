@@ -5,7 +5,8 @@ import { itemMods, makeItem, type Item, type Slot } from './items';
 import { SUPPORT_SOCKETS, canSupport, resolveSkill, type ActiveSkill } from './skills';
 import type { Mod } from './types';
 import { levelMods, newProgress, type Progress } from './progress';
-import { CLASSES, SKILLS, SUPPORTS, type ClassDef } from '../data';
+import { CLASSES, SKILLS, type ClassDef } from '../data';
+import { gemKey, migrateGemKey, parseGem } from './gems';
 
 export const BAG_SIZE = 40;
 const SAVE_KEY = 'hero.save';
@@ -15,9 +16,9 @@ export interface Build {
   classId: string;
   equipment: Partial<Record<Slot, Item>>;
   bag: Item[];
-  /** 가진 보조 젬 개수 */
+  /** 가진 보조 젬 개수. 키는 "id:희귀도" */
   gems: Record<string, number>;
-  /** 스킬별 보조 젬 칸 (젬 id 또는 null) */
+  /** 스킬별 보조 젬 칸 ("id:희귀도" 또는 null) */
   sockets: Record<string, (string | null)[]>;
   level: number;
   xp: number;
@@ -34,7 +35,7 @@ export function newBuild(classId = 'warrior'): Build {
     classId,
     equipment: { weapon: makeItem('short_sword', 'normal', 1) },
     bag: [],
-    gems: { sup_focus: 1 },
+    gems: { [gemKey('sup_focus', 'common')]: 1 },
     sockets: {},
     level: 1,
     xp: 0,
@@ -68,8 +69,8 @@ export function socketsOf(build: Build, skillId: string): (string | null)[] {
 export function activeSkills(build: Build, equipment = build.equipment): ActiveSkill[] {
   const mods = baseMods(build, equipment);
   return classOf(build).skills.map((id) => {
-    const supports = socketsOf(build, id).filter((g): g is string => !!g).map((g) => SUPPORTS[g]).filter(Boolean);
-    return resolveSkill(SKILLS[id], supports, mods);
+    const keys = socketsOf(build, id).filter((g): g is string => !!g);
+    return resolveSkill(SKILLS[id], keys, mods);
   });
 }
 
@@ -80,17 +81,18 @@ export function freeGems(build: Build, gemId: string): number {
   return (build.gems[gemId] ?? 0) - used;
 }
 
-/** 보조 젬 칸에 젬을 끼우거나(gemId) 뺌(null). 성공하면 true */
-export function socketGem(build: Build, skillId: string, index: number, gemId: string | null): boolean {
+/** 보조 젬 칸에 젬을 끼우거나(gemKey) 뺌(null). 성공하면 true */
+export function socketGem(build: Build, skillId: string, index: number, key: string | null): boolean {
   const list = socketsOf(build, skillId);
   if (index < 0 || index >= list.length) return false;
-  if (gemId) {
-    const sup = SUPPORTS[gemId];
-    if (!sup || !canSupport(SKILLS[skillId], sup)) return false;
-    if (list.includes(gemId)) return false; // 같은 젬을 한 스킬에 두 번은 안 됨
-    if (freeGems(build, gemId) <= 0) return false;
+  if (key) {
+    const gem = parseGem(key);
+    if (!gem || !canSupport(SKILLS[skillId], gem.def)) return false;
+    // 같은 종류의 젬은 희귀도가 달라도 한 스킬에 하나만 (지금 칸에 있던 것과 바꾸는 건 허용)
+    if (list.some((g, i) => i !== index && g && parseGem(g)?.def.id === gem.def.id)) return false;
+    if (list[index] !== key && freeGems(build, key) <= 0) return false;
   }
-  list[index] = gemId;
+  list[index] = key;
   build.sockets[skillId] = list;
   return true;
 }
@@ -205,8 +207,9 @@ export function loadBuild(): Build {
           equipment: data.equipment ?? {},
           bag: data.bag ?? [],
           // 4단계 이전 세이브에는 없음
-          gems: data.gems ?? { sup_focus: 1 },
-          sockets: data.sockets ?? {},
+          // 젬 희귀도 도입 전 세이브는 모두 일반 등급으로
+          gems: Object.fromEntries(Object.entries(data.gems ?? { sup_focus: 1 }).map(([k, n]) => [migrateGemKey(k), n])),
+          sockets: Object.fromEntries(Object.entries(data.sockets ?? {}).map(([s, l]) => [s, l.map((g) => (g ? migrateGemKey(g) : null))])),
           // 5단계 이전 세이브에는 없음
           level: data.level ?? 1,
           xp: data.xp ?? 0,

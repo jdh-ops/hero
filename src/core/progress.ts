@@ -2,6 +2,7 @@
 import { DROPS, MAPS, SUPPORTS, type DropTable, type GemRarity, type MapDef } from '../data';
 import type { Rng } from './damage';
 import type { Mod } from './types';
+import { gemKey } from './gems';
 
 export type StoryDifficulty = 'normal' | 'hard' | 'hell';
 
@@ -72,6 +73,7 @@ export function dropTableFor(run: RunConfig): DropTable {
     itemChance: m.itemChance + m.perTier.itemChance * t,
     itemRarity: { ...m.itemRarity, rare: m.itemRarity.rare + m.perTier.rare * t },
     gemChance: m.gemChance,
+    // 티어가 오를수록 희귀 젬 비율 상승
     gemRarity: { ...m.gemRarity, rare: m.gemRarity.rare + m.perTier.gemRare * t },
   };
 }
@@ -90,12 +92,11 @@ export function rollItemRarity(table: DropTable, rng: Rng = Math.random) {
   return pickWeighted(table.itemRarity, rng);
 }
 
-/** 희귀도를 먼저 고르고 그 희귀도의 젬 중 하나 */
+/** 젬 종류는 고르게, 희귀도는 드랍 테이블 비율로. "id:희귀도" 를 돌려줌 */
 export function rollGem(table: DropTable, rng: Rng = Math.random): string {
-  const rarity = pickWeighted(table.gemRarity, rng) as GemRarity;
-  const pool = Object.values(SUPPORTS).filter((s) => s.rarity === rarity);
-  const list = pool.length ? pool : Object.values(SUPPORTS);
-  return list[Math.floor(rng() * list.length)].id;
+  const list = Object.values(SUPPORTS);
+  const def = list[Math.floor(rng() * list.length)];
+  return gemKey(def.id, pickWeighted(table.gemRarity, rng) as GemRarity);
 }
 
 // ---------- 캐릭터 레벨 ----------

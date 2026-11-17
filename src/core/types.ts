@@ -70,19 +70,12 @@ export interface SkillDef {
   gainAs?: { type: DamageType; ratio: number }[];
 }
 
-/** 보조 젬. 연결한 스킬 하나에만 효과 */
-export interface SupportDef {
-  id: string;
-  name: string;
-  /** 희귀도: 높은 난이도일수록 희귀한 젬이 잘 나옴 */
-  rarity: 'common' | 'uncommon' | 'rare';
-  description: string;
-  /** 이 태그 중 하나라도 있는 스킬에만 연결 가능 (없으면 모든 스킬) */
-  requires?: Tag[];
+export type GemRarity = 'common' | 'uncommon' | 'rare';
+
+/** 보조 젬 효과 (희귀도마다 수치가 다름) */
+export interface SupportEffect {
   /** 스킬 계산에 더해지는 수치 (추가 피해 등) */
   mods?: Mod[];
-  /** 스킬 자체 변경 */
-  addTags?: Tag[];
   manaMult?: number;
   cooldownMult?: number;
   radiusMult?: number;
@@ -90,4 +83,14 @@ export interface SupportDef {
   extraPierce?: number;
   durationMult?: number;
   gainAs?: { type: DamageType; ratio: number }[];
+}
+
+/** 보조 젬 종류. 연결한 스킬 하나에만 효과 */
+export interface SupportDef {
+  id: string;
+  name: string;
+  /** 이 태그 중 하나라도 있는 스킬에만 연결 가능 (없으면 모든 스킬) */
+  requires?: Tag[];
+  /** 희귀도별 효과: 일반 < 고급 < 희귀 */
+  levels: Record<GemRarity, SupportEffect>;
 }

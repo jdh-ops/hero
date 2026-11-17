@@ -8,9 +8,9 @@
   },
   "gemChance": 0.03,
   "gemRarity": {
-   "common": 85,
-   "uncommon": 14,
-   "rare": 1
+   "common": 100,
+   "uncommon": 0,
+   "rare": 0
   }
  },
  "hard": {
@@ -22,9 +22,9 @@
   },
   "gemChance": 0.04,
   "gemRarity": {
-   "common": 65,
+   "common": 70,
    "uncommon": 30,
-   "rare": 5
+   "rare": 0
   }
  },
  "hell": {
@@ -36,9 +36,9 @@
   },
   "gemChance": 0.05,
   "gemRarity": {
-   "common": 45,
-   "uncommon": 42,
-   "rare": 13
+   "common": 50,
+   "uncommon": 38,
+   "rare": 12
   }
  },
  "mapping": {
@@ -50,14 +50,14 @@
   },
   "gemChance": 0.06,
   "gemRarity": {
-   "common": 35,
-   "uncommon": 45,
-   "rare": 20
+   "common": 42,
+   "uncommon": 42,
+   "rare": 16
   },
   "perTier": {
    "itemChance": 0.01,
    "rare": 2,
-   "gemRare": 1.5
+   "gemRare": 2.5
   }
  }
 }

@@ -43,31 +43,46 @@ describe('장비', () => {
 
 import { activeSkills, freeGems, pickUpGem, socketGem } from '../src/core/build';
 import { averageHit } from '../src/core/damage';
+import { gemKey, migrateGemKey } from '../src/core/gems';
+
+const F = gemKey('sup_focus', 'common');
 
 describe('보조 젬', () => {
-  it('태그가 맞는 스킬에만, 가진 개수만큼만 끼울 수 있다', () => {
+  it('태그가 맞는 스킬에만, 가진 개수만큼만, 같은 종류는 한 스킬에 하나', () => {
     const b = newBuild();
-    expect(socketGem(b, 'warrior_whirl', 0, 'sup_multi')).toBe(false); // 투사체 전용
-    expect(socketGem(b, 'warrior_whirl', 0, 'sup_focus')).toBe(true);
-    expect(freeGems(b, 'sup_focus')).toBe(0);
-    expect(socketGem(b, 'warrior_slam', 0, 'sup_focus')).toBe(false); // 하나뿐
-    pickUpGem(b, 'sup_focus');
-    expect(socketGem(b, 'warrior_whirl', 1, 'sup_focus')).toBe(false); // 같은 스킬에 두 번은 안 됨
-    expect(socketGem(b, 'warrior_slam', 0, 'sup_focus')).toBe(true);
+    expect(socketGem(b, 'warrior_whirl', 0, gemKey('sup_multi', 'common'))).toBe(false); // 투사체 전용
+    expect(socketGem(b, 'warrior_whirl', 0, F)).toBe(true);
+    expect(freeGems(b, F)).toBe(0);
+    expect(socketGem(b, 'warrior_slam', 0, F)).toBe(false); // 하나뿐
+    pickUpGem(b, gemKey('sup_focus', 'rare'));
+    expect(socketGem(b, 'warrior_whirl', 1, gemKey('sup_focus', 'rare'))).toBe(false); // 희귀도가 달라도 같은 종류
+    expect(socketGem(b, 'warrior_whirl', 0, gemKey('sup_focus', 'rare'))).toBe(true); // 같은 칸에서 교체는 가능
+    expect(freeGems(b, F)).toBe(1);
   });
 
-  it('젬 효과가 스킬에 반영된다', () => {
+  it('희귀도가 높을수록 효과가 크다', () => {
+    const hit = (r: 'common' | 'uncommon' | 'rare') => {
+      const b = newBuild();
+      pickUpGem(b, gemKey('sup_focus', r));
+      socketGem(b, 'warrior_whirl', 0, gemKey('sup_focus', r));
+      const a = activeSkills(b)[0];
+      return averageHit(a.stats, a.def);
+    };
+    const base = (() => { const a = activeSkills(newBuild())[0]; return averageHit(a.stats, a.def); })();
+    expect(hit('common')).toBeCloseTo(base * 1.25);
+    expect(hit('uncommon')).toBeCloseTo(base * 1.32);
+    expect(hit('rare')).toBeCloseTo(base * 1.4);
+  });
+
+  it('다중 투사체: 희귀는 투사체 3개 추가', () => {
     const b = newBuild();
-    const before = activeSkills(b);
-    pickUpGem(b, 'sup_multi');
-    pickUpGem(b, 'sup_fire');
-    socketGem(b, 'warrior_whirl', 0, 'sup_focus');
-    socketGem(b, 'warrior_axe', 0, 'sup_multi');
-    socketGem(b, 'warrior_slam', 0, 'sup_fire');
-    const after = activeSkills(b);
-    expect(averageHit(after[0].stats, after[0].def)).toBeCloseTo(averageHit(before[0].stats, before[0].def) * 1.3);
-    expect(after[0].def.manaCost).toBe(Math.round(12 * 1.3));
-    expect(after[2].def.projectiles).toBe(3);
-    expect(averageHit(after[1].stats, after[1].def)).toBeGreaterThan(averageHit(before[1].stats, before[1].def));
+    pickUpGem(b, gemKey('sup_multi', 'rare'));
+    socketGem(b, 'warrior_axe', 0, gemKey('sup_multi', 'rare'));
+    expect(activeSkills(b)[2].def.projectiles).toBe(4);
+  });
+
+  it('예전 세이브 젬 키는 일반 등급으로', () => {
+    expect(migrateGemKey('sup_fire')).toBe('sup_fire:common');
+    expect(migrateGemKey('sup_fire:rare')).toBe('sup_fire:rare');
   });
 });

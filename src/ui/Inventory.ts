@@ -8,6 +8,7 @@ import { RARITY_NAMES, SLOTS, SLOT_NAMES, BASES, describeMod, type Item } from '
 import { canSupport, skillNumbers } from '../core/skills';
 import type { Tag } from '../core/types';
 import { SKILLS, SUPPORTS } from '../data';
+import { GEM_RARITIES, GEM_RARITY_KO, describeGem, gemKey, parseGem } from '../core/gems';
 
 const TAG_KO: Record<Tag, string> = {
   attack: '공격', spell: '주문', melee: '근접', ranged: '원거리', projectile: '투사체', area: '범위',
@@ -189,8 +190,9 @@ export class InventoryUI {
       const nums = skillNumbers(a).map((r) => `<dt>${r.label}</dt><dd>${r.value}</dd>`).join('');
       const sockets = socketsOf(b, id).map((g, idx) => {
         const on = this.socket?.skillId === id && this.socket.index === idx ? ' selected' : '';
-        return `<button type="button" class="gem-socket${g ? ' filled' : ''}${on}" data-act="socket" data-skill="${id}" data-index="${idx}">
-          ${g ? esc(SUPPORTS[g]?.name ?? g) : '+ 보조 젬'}</button>`;
+        const gem = g ? parseGem(g) : null;
+        return `<button type="button" class="gem-socket${gem ? ` filled g-${gem.rarity}` : ''}${on}" data-act="socket" data-skill="${id}" data-index="${idx}">
+          ${gem ? `${esc(gem.def.name)}<small>${GEM_RARITY_KO[gem.rarity]}</small>` : '+ 보조 젬'}</button>`;
       }).join('');
       return `<article class="skill-card">
         <h4><span class="key">${i + 1}</span>${esc(a.def.name)}</h4>
@@ -205,27 +207,37 @@ export class InventoryUI {
   }
 
   private gemPicker(b: Build): string {
-    const owned = Object.keys(SUPPORTS).filter((g) => (b.gems[g] ?? 0) > 0);
+    // 가진 젬: 종류 순서 → 희귀도 높은 순
+    const owned: string[] = [];
+    for (const def of Object.values(SUPPORTS)) {
+      for (const r of [...GEM_RARITIES].reverse()) if ((b.gems[gemKey(def.id, r)] ?? 0) > 0) owned.push(gemKey(def.id, r));
+    }
+    const label = (key: string) => {
+      const g = parseGem(key)!;
+      return `<b>${esc(g.def.name)}</b> <span class="g-tag g-${g.rarity}">${GEM_RARITY_KO[g.rarity]}</span>`;
+    };
     if (!this.socket) {
-      const list = owned.map((g) => `<li><b>${esc(SUPPORTS[g].name)}</b> ×${b.gems[g]}<br><span class="dim">${esc(SUPPORTS[g].description)}</span></li>`).join('');
-      return `<h3>가진 보조 젬</h3>${list ? `<ul class="gem-list">${list}</ul>` : '<p class="inv-empty">없음. 몬스터가 가끔 떨어뜨립니다.</p>'}`;
+      const list = owned.map((k) => `<li>${label(k)} ×${b.gems[k]}<br><span class="dim">${esc(describeGem(k))}</span></li>`).join('');
+      return `<h3>가진 보조 젬 (같은 젬도 희귀도가 높을수록 수치가 큼)</h3>${list ? `<ul class="gem-list">${list}</ul>` : '<p class="inv-empty">없음. 몬스터가 가끔 떨어뜨립니다.</p>'}`;
     }
     const skill = SKILLS[this.socket.skillId];
-    const current = socketsOf(b, skill.id)[this.socket.index];
-    const rows = owned.map((g) => {
-      const sup = SUPPORTS[g];
-      const ok = canSupport(skill, sup);
-      const free = freeGems(b, g);
-      const already = socketsOf(b, skill.id).includes(g);
-      const why = !ok ? `${sup.requires!.map((t) => TAG_KO[t]).join('/')} 스킬 전용` : already ? '이미 연결됨' : free <= 0 ? '모두 사용 중' : `남은 개수 ${free}`;
-      const disabled = !ok || already || free <= 0;
-      return `<button type="button" class="gem-option" data-act="gem" data-gem="${g}" ${disabled ? 'disabled' : ''}>
-        <b>${esc(sup.name)}</b> <span class="dim">· ${why}</span><br><span class="dim">${esc(sup.description)}</span></button>`;
+    const sockets = socketsOf(b, skill.id);
+    const current = sockets[this.socket.index];
+    // 이 스킬에 맞지 않는 젬은 목록에서 뺌
+    const rows = owned.filter((k) => canSupport(skill, parseGem(k)!.def)).map((k) => {
+      const g = parseGem(k)!;
+      const free = freeGems(b, k);
+      const other = sockets.some((s, i) => i !== this.socket!.index && s && parseGem(s)?.def.id === g.def.id);
+      const isCurrent = current === k;
+      const why = isCurrent ? '지금 이 칸' : other ? '같은 종류가 이미 연결됨' : free <= 0 ? '모두 사용 중' : `남은 개수 ${free}`;
+      const disabled = isCurrent || other || free <= 0;
+      return `<button type="button" class="gem-option" data-act="gem" data-gem="${k}" ${disabled ? 'disabled' : ''}>
+        ${label(k)} <span class="dim">· ${why}</span><br><span class="dim">${esc(describeGem(k))}</span></button>`;
     }).join('');
-    const remove = current ? `<button type="button" data-act="gem" data-gem="">${esc(SUPPORTS[current].name)} 빼기</button>` : '';
+    const remove = current ? `<button type="button" data-act="gem" data-gem="">${esc(parseGem(current)?.def.name ?? '')} 빼기</button>` : '';
     return `<p class="title">${esc(skill.name)} · ${this.socket.index + 1}번 칸</p>
       <div class="inv-actions">${remove}<button type="button" data-act="socket-cancel">취소</button></div>
-      <div class="gem-options">${rows || '<p class="inv-empty">가진 보조 젬이 없습니다.</p>'}</div>`;
+      <div class="gem-options">${rows || '<p class="inv-empty">이 스킬에 끼울 수 있는 보조 젬이 없습니다.</p>'}</div>`;
   }
 
   private detail(b: Build, item: Item, cur: Summary): string {

@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import {
   addXp, areaLevel, canStart, dropTableFor, mappingUnlocked, maxMappingTier, newProgress, recordClear, rollGem, xpToNext,
 } from '../src/core/progress';
-import { SUPPORTS } from '../src/data';
 
 describe('진행', () => {
   it('스토리는 순서대로 해금, 지옥까지 깨면 맵핑', () => {
@@ -35,14 +34,22 @@ describe('진행', () => {
     expect(m5.itemRarity.rare).toBeGreaterThan(h.itemRarity.rare);
   });
 
-  it('희귀 젬은 지옥에서 더 자주', () => {
-    const count = (difficulty: 'normal' | 'hell') => {
-      const t = dropTableFor({ mode: 'story', difficulty, mapIndex: 0 });
-      let rare = 0;
-      for (let i = 0; i < 4000; i++) if (SUPPORTS[rollGem(t)].rarity === 'rare') rare++;
-      return rare;
+  it('젬 희귀도: 보통은 일반만, 어려움은 고급까지, 지옥부터 희귀, 맵핑 티어마다 희귀 상승', () => {
+    const seen = (run: Parameters<typeof dropTableFor>[0]) => {
+      const t = dropTableFor(run);
+      const out = { common: 0, uncommon: 0, rare: 0 };
+      for (let i = 0; i < 3000; i++) out[rollGem(t).split(':')[1] as keyof typeof out]++;
+      return out;
     };
-    expect(count('hell')).toBeGreaterThan(count('normal') * 4);
+    const n = seen({ mode: 'story', difficulty: 'normal', mapIndex: 0 });
+    expect(n.uncommon + n.rare).toBe(0);
+    const h = seen({ mode: 'story', difficulty: 'hard', mapIndex: 0 });
+    expect(h.uncommon).toBeGreaterThan(0);
+    expect(h.rare).toBe(0);
+    expect(seen({ mode: 'story', difficulty: 'hell', mapIndex: 0 }).rare).toBeGreaterThan(0);
+    const t1 = dropTableFor({ mode: 'mapping', mapId: 'canyon', tier: 1 }).gemRarity.rare;
+    const t10 = dropTableFor({ mode: 'mapping', mapId: 'canyon', tier: 10 }).gemRarity.rare;
+    expect(t10).toBeGreaterThan(t1);
   });
 
   it('경험치가 차면 레벨 업', () => {

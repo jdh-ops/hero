@@ -2,6 +2,7 @@
 import { StatSheet } from './stats';
 import { averageHit } from './damage';
 import type { Mod, SkillDef, SupportDef } from './types';
+import { parseGem } from './gems';
 
 /** 스킬 하나에 연결할 수 있는 보조 젬 칸 수 */
 export const SUPPORT_SOCKETS = 2;
@@ -16,17 +17,19 @@ export interface ActiveSkill {
   def: SkillDef;
   /** 캐릭터 스탯 + 보조 젬 수치 */
   stats: StatSheet;
-  supports: SupportDef[];
+  /** 끼운 젬 키 ("id:희귀도") */
+  supports: string[];
 }
 
-/** baseMods: 캐릭터(직업 + 장비) 수정치 */
-export function resolveSkill(skill: SkillDef, supports: SupportDef[], baseMods: readonly Mod[]): ActiveSkill {
+/** gemKeys: 끼운 보조 젬 ("id:희귀도"), baseMods: 캐릭터(직업 + 장비 + 레벨) 수정치 */
+export function resolveSkill(skill: SkillDef, gemKeys: string[], baseMods: readonly Mod[]): ActiveSkill {
   const def: SkillDef = { ...skill, tags: [...skill.tags], gainAs: [...(skill.gainAs ?? [])] };
   const mods: Mod[] = [...baseMods];
-  for (const s of supports) {
-    if (!canSupport(skill, s)) continue;
+  for (const key of gemKeys) {
+    const gem = parseGem(key);
+    if (!gem || !canSupport(skill, gem.def)) continue;
+    const s = gem.effect;
     mods.push(...(s.mods ?? []));
-    for (const t of s.addTags ?? []) if (!def.tags.includes(t)) def.tags.push(t);
     def.manaCost *= s.manaMult ?? 1;
     def.cooldown *= s.cooldownMult ?? 1;
     if (def.radius) def.radius *= s.radiusMult ?? 1;
@@ -37,7 +40,7 @@ export function resolveSkill(skill: SkillDef, supports: SupportDef[], baseMods: 
     def.gainAs!.push(...(s.gainAs ?? []));
   }
   def.manaCost = Math.round(def.manaCost);
-  return { def, stats: new StatSheet(mods), supports };
+  return { def, stats: new StatSheet(mods), supports: gemKeys };
 }
 
 /** 스킬 창에 보여줄 수치 */

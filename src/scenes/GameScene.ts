@@ -14,6 +14,7 @@ import {
   addXp, areaLevel, dropTableFor, mapOf, monsterXp, recordClear, rollGem, rollItemRarity, runName, xpToNext,
   type RunConfig,
 } from '../core/progress';
+import { GEM_RARITIES, GEM_RARITY_COLOR, gemKey, gemName, parseGem } from '../core/gems';
 import { Joystick } from '../ui/Joystick';
 import { InventoryUI } from '../ui/Inventory';
 import { MapSelectUI } from '../ui/MapSelect';
@@ -185,7 +186,7 @@ export class GameScene extends Phaser.Scene {
 
   /** 디버그: 보조 젬을 하나씩 모두 줌 */
   debugGems() {
-    for (const id of Object.keys(SUPPORTS)) pickUpGem(this.build, id);
+    for (const id of Object.keys(SUPPORTS)) for (const r of GEM_RARITIES) pickUpGem(this.build, gemKey(id, r));
     this.onBuildChanged();
   }
 
@@ -683,10 +684,13 @@ export class GameScene extends Phaser.Scene {
     this.drops.push({ item, gem, label });
   }
 
+  /** gemId: "id:희귀도". 동그란 초록 젬 + 희귀도 색 테두리 */
   private spawnGemDrop(x: number, y: number, gemId: string) {
-    const gem = this.add.circle(x, y, 7, GEM_COLOR).setStrokeStyle(2, 0x000000, 0.6).setDepth(3);
-    const label = this.add.text(x, y - 16, `보조 젬: ${SUPPORTS[gemId].name}`, {
-      fontFamily: 'system-ui, sans-serif', fontSize: '12px', color: '#8ee69c', stroke: '#000000', strokeThickness: 3,
+    const rarity = parseGem(gemId)?.rarity ?? 'common';
+    const color = GEM_RARITY_COLOR[rarity];
+    const gem = this.add.circle(x, y, 7, GEM_COLOR).setStrokeStyle(3, Phaser.Display.Color.HexStringToColor(color).color, 1).setDepth(3);
+    const label = this.add.text(x, y - 16, `보조 젬: ${gemName(gemId)}`, {
+      fontFamily: 'system-ui, sans-serif', fontSize: '12px', color, stroke: '#000000', strokeThickness: 3,
     }).setOrigin(0.5).setDepth(3);
     this.tweens.add({ targets: gem, scale: 1.3, yoyo: true, repeat: -1, duration: 600 });
     this.drops.push({ gemId, gem, label });
@@ -697,7 +701,7 @@ export class GameScene extends Phaser.Scene {
       if (Phaser.Math.Distance.Between(this.player.x, this.player.y, d.gem.x, d.gem.y) > PICKUP_RADIUS) return true;
       if (d.gemId) {
         pickUpGem(this.build, d.gemId);
-        this.floatText(this.player.x, this.player.y - 40, `보조 젬: ${SUPPORTS[d.gemId].name}`, '#8ee69c');
+        this.floatText(this.player.x, this.player.y - 40, `보조 젬: ${gemName(d.gemId)}`, GEM_RARITY_COLOR[parseGem(d.gemId)?.rarity ?? 'common']);
         d.gem.destroy();
         d.label.destroy();
         saveBuild(this.build);

@@ -2,157 +2,367 @@
  "sup_focus": {
   "id": "sup_focus",
   "name": "집중 타격",
-  "description": "추가 30% 피해. 마나 소모 30% 증가.",
-  "mods": [
-   {
-    "kind": "more",
-    "tag": "all",
-    "value": 0.3
+  "levels": {
+   "common": {
+    "mods": [
+     {
+      "kind": "more",
+      "tag": "all",
+      "value": 0.25
+     }
+    ],
+    "manaMult": 1.3
+   },
+   "uncommon": {
+    "mods": [
+     {
+      "kind": "more",
+      "tag": "all",
+      "value": 0.32
+     }
+    ],
+    "manaMult": 1.3
+   },
+   "rare": {
+    "mods": [
+     {
+      "kind": "more",
+      "tag": "all",
+      "value": 0.4
+     }
+    ],
+    "manaMult": 1.3
    }
-  ],
-  "manaMult": 1.3,
-  "rarity": "common"
+  }
  },
  "sup_melee": {
   "id": "sup_melee",
   "name": "근접 숙련",
-  "description": "근접 피해 추가 25%.",
   "requires": [
    "melee"
   ],
-  "mods": [
-   {
-    "kind": "more",
-    "tag": "melee",
-    "value": 0.25
+  "levels": {
+   "common": {
+    "mods": [
+     {
+      "kind": "more",
+      "tag": "melee",
+      "value": 0.2
+     }
+    ]
+   },
+   "uncommon": {
+    "mods": [
+     {
+      "kind": "more",
+      "tag": "melee",
+      "value": 0.27
+     }
+    ]
+   },
+   "rare": {
+    "mods": [
+     {
+      "kind": "more",
+      "tag": "melee",
+      "value": 0.35
+     }
+    ]
    }
-  ],
-  "rarity": "common"
+  }
  },
  "sup_area": {
   "id": "sup_area",
   "name": "범위 확대",
-  "description": "범위 반경 40% 증가. 피해 10% 감소(추가 -10%).",
   "requires": [
    "area"
   ],
-  "radiusMult": 1.4,
-  "mods": [
-   {
-    "kind": "more",
-    "tag": "all",
-    "value": -0.1
+  "levels": {
+   "common": {
+    "radiusMult": 1.3,
+    "mods": [
+     {
+      "kind": "more",
+      "tag": "all",
+      "value": -0.1
+     }
+    ]
+   },
+   "uncommon": {
+    "radiusMult": 1.4,
+    "mods": [
+     {
+      "kind": "more",
+      "tag": "all",
+      "value": -0.08
+     }
+    ]
+   },
+   "rare": {
+    "radiusMult": 1.5,
+    "mods": [
+     {
+      "kind": "more",
+      "tag": "all",
+      "value": -0.05
+     }
+    ]
    }
-  ],
-  "rarity": "common"
+  }
  },
  "sup_multi": {
   "id": "sup_multi",
   "name": "다중 투사체",
-  "description": "투사체 2개 추가. 피해 25% 감소(추가 -25%).",
   "requires": [
    "projectile"
   ],
-  "extraProjectiles": 2,
-  "mods": [
-   {
-    "kind": "more",
-    "tag": "all",
-    "value": -0.25
+  "levels": {
+   "common": {
+    "extraProjectiles": 2,
+    "mods": [
+     {
+      "kind": "more",
+      "tag": "all",
+      "value": -0.3
+     }
+    ]
+   },
+   "uncommon": {
+    "extraProjectiles": 2,
+    "mods": [
+     {
+      "kind": "more",
+      "tag": "all",
+      "value": -0.22
+     }
+    ]
+   },
+   "rare": {
+    "extraProjectiles": 3,
+    "mods": [
+     {
+      "kind": "more",
+      "tag": "all",
+      "value": -0.2
+     }
+    ]
    }
-  ],
-  "rarity": "uncommon"
+  }
  },
  "sup_pierce": {
   "id": "sup_pierce",
   "name": "관통",
-  "description": "적 2명 더 관통. 투사체 피해 +20%.",
   "requires": [
    "projectile"
   ],
-  "extraPierce": 2,
-  "mods": [
-   {
-    "kind": "inc",
-    "tag": "projectile",
-    "value": 0.2
+  "levels": {
+   "common": {
+    "extraPierce": 1,
+    "mods": [
+     {
+      "kind": "inc",
+      "tag": "projectile",
+      "value": 0.15
+     }
+    ]
+   },
+   "uncommon": {
+    "extraPierce": 2,
+    "mods": [
+     {
+      "kind": "inc",
+      "tag": "projectile",
+      "value": 0.2
+     }
+    ]
+   },
+   "rare": {
+    "extraPierce": 3,
+    "mods": [
+     {
+      "kind": "inc",
+      "tag": "projectile",
+      "value": 0.3
+     }
+    ]
    }
-  ],
-  "rarity": "uncommon"
+  }
  },
  "sup_brutal": {
   "id": "sup_brutal",
   "name": "잔혹함",
-  "description": "치명타 확률 +5%, 치명타 피해 +30%.",
   "requires": [
    "attack"
   ],
-  "mods": [
-   {
-    "kind": "flat",
-    "stat": "critChance",
-    "value": 0.05
+  "levels": {
+   "common": {
+    "mods": [
+     {
+      "kind": "flat",
+      "stat": "critChance",
+      "value": 0.03
+     },
+     {
+      "kind": "flat",
+      "stat": "critMulti",
+      "value": 0.2
+     }
+    ]
    },
-   {
-    "kind": "flat",
-    "stat": "critMulti",
-    "value": 0.3
+   "uncommon": {
+    "mods": [
+     {
+      "kind": "flat",
+      "stat": "critChance",
+      "value": 0.05
+     },
+     {
+      "kind": "flat",
+      "stat": "critMulti",
+      "value": 0.3
+     }
+    ]
+   },
+   "rare": {
+    "mods": [
+     {
+      "kind": "flat",
+      "stat": "critChance",
+      "value": 0.07
+     },
+     {
+      "kind": "flat",
+      "stat": "critMulti",
+      "value": 0.45
+     }
+    ]
    }
-  ],
-  "rarity": "uncommon"
+  }
  },
  "sup_haste": {
   "id": "sup_haste",
   "name": "신속",
-  "description": "쿨다운 25% 감소. 마나 소모 10% 증가.",
-  "cooldownMult": 0.75,
-  "manaMult": 1.1,
-  "rarity": "common"
+  "levels": {
+   "common": {
+    "cooldownMult": 0.8,
+    "manaMult": 1.1
+   },
+   "uncommon": {
+    "cooldownMult": 0.72,
+    "manaMult": 1.1
+   },
+   "rare": {
+    "cooldownMult": 0.65,
+    "manaMult": 1.1
+   }
+  }
  },
  "sup_linger": {
   "id": "sup_linger",
   "name": "지속 연장",
-  "description": "지속 시간 60% 증가.",
   "requires": [
    "sustained"
   ],
-  "durationMult": 1.6,
-  "rarity": "uncommon"
+  "levels": {
+   "common": {
+    "durationMult": 1.4
+   },
+   "uncommon": {
+    "durationMult": 1.6
+   },
+   "rare": {
+    "durationMult": 1.9
+   }
+  }
  },
  "sup_fire": {
   "id": "sup_fire",
   "name": "화염 부여",
-  "description": "물리 피해의 30%를 화염 피해로 추가로 줍니다.",
-  "gainAs": [
-   {
-    "type": "fire",
-    "ratio": 0.3
+  "levels": {
+   "common": {
+    "gainAs": [
+     {
+      "type": "fire",
+      "ratio": 0.2
+     }
+    ]
+   },
+   "uncommon": {
+    "gainAs": [
+     {
+      "type": "fire",
+      "ratio": 0.3
+     }
+    ]
+   },
+   "rare": {
+    "gainAs": [
+     {
+      "type": "fire",
+      "ratio": 0.4
+     }
+    ]
    }
-  ],
-  "rarity": "rare"
+  }
  },
  "sup_cold": {
   "id": "sup_cold",
   "name": "냉기 부여",
-  "description": "물리 피해의 30%를 냉기 피해로 추가로 줍니다.",
-  "gainAs": [
-   {
-    "type": "cold",
-    "ratio": 0.3
+  "levels": {
+   "common": {
+    "gainAs": [
+     {
+      "type": "cold",
+      "ratio": 0.2
+     }
+    ]
+   },
+   "uncommon": {
+    "gainAs": [
+     {
+      "type": "cold",
+      "ratio": 0.3
+     }
+    ]
+   },
+   "rare": {
+    "gainAs": [
+     {
+      "type": "cold",
+      "ratio": 0.4
+     }
+    ]
    }
-  ],
-  "rarity": "rare"
+  }
  },
  "sup_lightning": {
   "id": "sup_lightning",
   "name": "번개 부여",
-  "description": "물리 피해의 30%를 번개 피해로 추가로 줍니다.",
-  "gainAs": [
-   {
-    "type": "lightning",
-    "ratio": 0.3
+  "levels": {
+   "common": {
+    "gainAs": [
+     {
+      "type": "lightning",
+      "ratio": 0.2
+     }
+    ]
+   },
+   "uncommon": {
+    "gainAs": [
+     {
+      "type": "lightning",
+      "ratio": 0.3
+     }
+    ]
+   },
+   "rare": {
+    "gainAs": [
+     {
+      "type": "lightning",
+      "ratio": 0.4
+     }
+    ]
    }
-  ],
-  "rarity": "rare"
+  }
  }
 }

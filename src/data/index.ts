@@ -1,5 +1,6 @@
 // 데이터 테이블(JSON)을 타입이 붙은 형태로 내보낸다.
-import type { ElementType, Mod, SkillDef, SupportDef } from '../core/types';
+import type { ElementType, GemRarity, Mod, SkillDef, SupportDef } from '../core/types';
+export type { GemRarity };
 import skillsJson from './skills.json';
 import classesJson from './classes.json';
 import monstersJson from './monsters.json';
@@ -49,7 +50,6 @@ export interface MapDef {
   monsters: { id: string; weight: number }[];
 }
 
-export type GemRarity = 'common' | 'uncommon' | 'rare';
 
 export interface DropTable {
   itemChance: number;
