@@ -1,0 +1,357 @@
+{
+ "short_sword": {
+  "id": "short_sword",
+  "slot": "weapon",
+  "name": "짧은 검",
+  "level": 1,
+  "implicit": [
+   {
+    "kind": "added",
+    "type": "physical",
+    "min": 3,
+    "max": 6
+   }
+  ]
+ },
+ "broad_sword": {
+  "id": "broad_sword",
+  "slot": "weapon",
+  "name": "넓은 검",
+  "level": 5,
+  "implicit": [
+   {
+    "kind": "added",
+    "type": "physical",
+    "min": 6,
+    "max": 11
+   }
+  ]
+ },
+ "war_axe": {
+  "id": "war_axe",
+  "slot": "weapon",
+  "name": "전투 도끼",
+  "level": 10,
+  "implicit": [
+   {
+    "kind": "added",
+    "type": "physical",
+    "min": 9,
+    "max": 18
+   }
+  ]
+ },
+ "great_blade": {
+  "id": "great_blade",
+  "slot": "weapon",
+  "name": "대검",
+  "level": 16,
+  "implicit": [
+   {
+    "kind": "added",
+    "type": "physical",
+    "min": 14,
+    "max": 26
+   }
+  ]
+ },
+ "helmet_armor_0": {
+  "id": "helmet_armor_0",
+  "slot": "helmet",
+  "name": "철 투구",
+  "level": 1,
+  "implicit": [
+   {
+    "kind": "flat",
+    "stat": "armor",
+    "value": 30
+   }
+  ]
+ },
+ "helmet_evasion_0": {
+  "id": "helmet_evasion_0",
+  "slot": "helmet",
+  "name": "가죽 두건",
+  "level": 1,
+  "implicit": [
+   {
+    "kind": "flat",
+    "stat": "evasion",
+    "value": 30
+   }
+  ]
+ },
+ "helmet_shield_0": {
+  "id": "helmet_shield_0",
+  "slot": "helmet",
+  "name": "천 고깔",
+  "level": 1,
+  "implicit": [
+   {
+    "kind": "flat",
+    "stat": "maxShield",
+    "value": 12
+   }
+  ]
+ },
+ "helmet_armor_1": {
+  "id": "helmet_armor_1",
+  "slot": "helmet",
+  "name": "강철 투구",
+  "level": 10,
+  "implicit": [
+   {
+    "kind": "flat",
+    "stat": "armor",
+    "value": 75
+   }
+  ]
+ },
+ "helmet_evasion_1": {
+  "id": "helmet_evasion_1",
+  "slot": "helmet",
+  "name": "사냥꾼 두건",
+  "level": 10,
+  "implicit": [
+   {
+    "kind": "flat",
+    "stat": "evasion",
+    "value": 75
+   }
+  ]
+ },
+ "helmet_shield_1": {
+  "id": "helmet_shield_1",
+  "slot": "helmet",
+  "name": "현자 고깔",
+  "level": 10,
+  "implicit": [
+   {
+    "kind": "flat",
+    "stat": "maxShield",
+    "value": 30
+   }
+  ]
+ },
+ "chest_armor_0": {
+  "id": "chest_armor_0",
+  "slot": "chest",
+  "name": "사슬 갑옷",
+  "level": 1,
+  "implicit": [
+   {
+    "kind": "flat",
+    "stat": "armor",
+    "value": 60
+   }
+  ]
+ },
+ "chest_evasion_0": {
+  "id": "chest_evasion_0",
+  "slot": "chest",
+  "name": "가죽 조끼",
+  "level": 1,
+  "implicit": [
+   {
+    "kind": "flat",
+    "stat": "evasion",
+    "value": 60
+   }
+  ]
+ },
+ "chest_shield_0": {
+  "id": "chest_shield_0",
+  "slot": "chest",
+  "name": "수련 로브",
+  "level": 1,
+  "implicit": [
+   {
+    "kind": "flat",
+    "stat": "maxShield",
+    "value": 24
+   }
+  ]
+ },
+ "chest_armor_1": {
+  "id": "chest_armor_1",
+  "slot": "chest",
+  "name": "판금 갑옷",
+  "level": 10,
+  "implicit": [
+   {
+    "kind": "flat",
+    "stat": "armor",
+    "value": 150
+   }
+  ]
+ },
+ "chest_evasion_1": {
+  "id": "chest_evasion_1",
+  "slot": "chest",
+  "name": "그림자 조끼",
+  "level": 10,
+  "implicit": [
+   {
+    "kind": "flat",
+    "stat": "evasion",
+    "value": 150
+   }
+  ]
+ },
+ "chest_shield_1": {
+  "id": "chest_shield_1",
+  "slot": "chest",
+  "name": "비전 로브",
+  "level": 10,
+  "implicit": [
+   {
+    "kind": "flat",
+    "stat": "maxShield",
+    "value": 60
+   }
+  ]
+ },
+ "boots_armor_0": {
+  "id": "boots_armor_0",
+  "slot": "boots",
+  "name": "철 장화",
+  "level": 1,
+  "implicit": [
+   {
+    "kind": "flat",
+    "stat": "armor",
+    "value": 24
+   }
+  ]
+ },
+ "boots_evasion_0": {
+  "id": "boots_evasion_0",
+  "slot": "boots",
+  "name": "가죽 신발",
+  "level": 1,
+  "implicit": [
+   {
+    "kind": "flat",
+    "stat": "evasion",
+    "value": 24
+   }
+  ]
+ },
+ "boots_shield_0": {
+  "id": "boots_shield_0",
+  "slot": "boots",
+  "name": "천 신발",
+  "level": 1,
+  "implicit": [
+   {
+    "kind": "flat",
+    "stat": "maxShield",
+    "value": 10
+   }
+  ]
+ },
+ "boots_armor_1": {
+  "id": "boots_armor_1",
+  "slot": "boots",
+  "name": "강철 장화",
+  "level": 10,
+  "implicit": [
+   {
+    "kind": "flat",
+    "stat": "armor",
+    "value": 60
+   }
+  ]
+ },
+ "boots_evasion_1": {
+  "id": "boots_evasion_1",
+  "slot": "boots",
+  "name": "질주 신발",
+  "level": 10,
+  "implicit": [
+   {
+    "kind": "flat",
+    "stat": "evasion",
+    "value": 60
+   }
+  ]
+ },
+ "boots_shield_1": {
+  "id": "boots_shield_1",
+  "slot": "boots",
+  "name": "비단 신발",
+  "level": 10,
+  "implicit": [
+   {
+    "kind": "flat",
+    "stat": "maxShield",
+    "value": 24
+   }
+  ]
+ },
+ "ring_copper": {
+  "id": "ring_copper",
+  "slot": "ring",
+  "name": "구리 반지",
+  "level": 1,
+  "implicit": [
+   {
+    "kind": "flat",
+    "stat": "maxLife",
+    "value": 10
+   }
+  ]
+ },
+ "ring_silver": {
+  "id": "ring_silver",
+  "slot": "ring",
+  "name": "은 반지",
+  "level": 1,
+  "implicit": [
+   {
+    "kind": "flat",
+    "stat": "maxMana",
+    "value": 10
+   }
+  ]
+ },
+ "ring_ruby": {
+  "id": "ring_ruby",
+  "slot": "ring",
+  "name": "루비 반지",
+  "level": 8,
+  "implicit": [
+   {
+    "kind": "flat",
+    "stat": "resFire",
+    "value": 0.12
+   }
+  ]
+ },
+ "ring_sapphire": {
+  "id": "ring_sapphire",
+  "slot": "ring",
+  "name": "사파이어 반지",
+  "level": 8,
+  "implicit": [
+   {
+    "kind": "flat",
+    "stat": "resCold",
+    "value": 0.12
+   }
+  ]
+ },
+ "ring_topaz": {
+  "id": "ring_topaz",
+  "slot": "ring",
+  "name": "토파즈 반지",
+  "level": 8,
+  "implicit": [
+   {
+    "kind": "flat",
+    "stat": "resLightning",
+    "value": 0.12
+   }
+  ]
+ }
+}

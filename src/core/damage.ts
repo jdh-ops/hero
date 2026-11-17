@@ -41,6 +41,14 @@ export interface Defender {
 
 const roll = (min: number, max: number, rng: Rng) => min + (max - min) * rng();
 
+/** 피해 타입별로 적용되는 태그 = 스킬 태그 + 피해 타입 (+ 원소면 elemental) */
+function tagsFor(skill: SkillDef, type: DamageType): Tag[] {
+  const tags: Tag[] = [...skill.tags];
+  if (!tags.includes(type)) tags.push(type);
+  if (type !== 'physical') tags.push('elemental');
+  return tags;
+}
+
 export function critChance(stats: StatSheet): number {
   return Math.min(1, BASE_CRIT_CHANCE + stats.flat.critChance);
 }
@@ -62,7 +70,7 @@ export function computeHit(stats: StatSheet, skill: SkillDef, level: number, rng
     if (base <= 0) continue;
 
     // 이 피해 타입에 적용되는 태그 = 스킬 태그 + 피해 타입
-    const tags: Tag[] = skill.tags.includes(type) ? skill.tags : [...skill.tags, type];
+    const tags = tagsFor(skill, type);
     amounts[type] = base * skill.effectiveness * (1 + stats.increased(tags)) * stats.more(tags) * critFactor;
   }
 
@@ -121,7 +129,7 @@ export function expectedDps(stats: StatSheet, skill: SkillDef): number {
     let base = (a.min + a.max) / 2;
     if (type === skill.damageType) base += (skill.baseMin + skill.baseMax) / 2;
     if (base <= 0) continue;
-    const tags: Tag[] = skill.tags.includes(type) ? skill.tags : [...skill.tags, type];
+    const tags = tagsFor(skill, type);
     avg += base * skill.effectiveness * (1 + stats.increased(tags)) * stats.more(tags);
   }
   const critAvg = 1 + critChance(stats) * (critMulti(stats) - 1);

@@ -1,0 +1,746 @@
+{
+ "str": {
+  "id": "str",
+  "slots": [
+   "weapon",
+   "helmet",
+   "chest",
+   "boots",
+   "ring"
+  ],
+  "mod": {
+   "kind": "flat",
+   "stat": "str"
+  },
+  "tiers": [
+   {
+    "level": 1,
+    "lo": 4,
+    "hi": 8
+   },
+   {
+    "level": 8,
+    "lo": 9,
+    "hi": 15
+   },
+   {
+    "level": 16,
+    "lo": 16,
+    "hi": 24
+   }
+  ],
+  "weight": 10
+ },
+ "dex": {
+  "id": "dex",
+  "slots": [
+   "weapon",
+   "helmet",
+   "chest",
+   "boots",
+   "ring"
+  ],
+  "mod": {
+   "kind": "flat",
+   "stat": "dex"
+  },
+  "tiers": [
+   {
+    "level": 1,
+    "lo": 4,
+    "hi": 8
+   },
+   {
+    "level": 8,
+    "lo": 9,
+    "hi": 15
+   },
+   {
+    "level": 16,
+    "lo": 16,
+    "hi": 24
+   }
+  ],
+  "weight": 10
+ },
+ "int": {
+  "id": "int",
+  "slots": [
+   "weapon",
+   "helmet",
+   "chest",
+   "boots",
+   "ring"
+  ],
+  "mod": {
+   "kind": "flat",
+   "stat": "int"
+  },
+  "tiers": [
+   {
+    "level": 1,
+    "lo": 4,
+    "hi": 8
+   },
+   {
+    "level": 8,
+    "lo": 9,
+    "hi": 15
+   },
+   {
+    "level": 16,
+    "lo": 16,
+    "hi": 24
+   }
+  ],
+  "weight": 10
+ },
+ "maxLife": {
+  "id": "maxLife",
+  "slots": [
+   "helmet",
+   "chest",
+   "boots",
+   "ring"
+  ],
+  "mod": {
+   "kind": "flat",
+   "stat": "maxLife"
+  },
+  "tiers": [
+   {
+    "level": 1,
+    "lo": 10,
+    "hi": 20
+   },
+   {
+    "level": 8,
+    "lo": 21,
+    "hi": 35
+   },
+   {
+    "level": 16,
+    "lo": 36,
+    "hi": 55
+   }
+  ],
+  "weight": 14
+ },
+ "maxMana": {
+  "id": "maxMana",
+  "slots": [
+   "helmet",
+   "ring"
+  ],
+  "mod": {
+   "kind": "flat",
+   "stat": "maxMana"
+  },
+  "tiers": [
+   {
+    "level": 1,
+    "lo": 8,
+    "hi": 15
+   },
+   {
+    "level": 8,
+    "lo": 16,
+    "hi": 25
+   },
+   {
+    "level": 16,
+    "lo": 26,
+    "hi": 38
+   }
+  ],
+  "weight": 10
+ },
+ "maxShield": {
+  "id": "maxShield",
+  "slots": [
+   "helmet",
+   "chest",
+   "boots"
+  ],
+  "mod": {
+   "kind": "flat",
+   "stat": "maxShield"
+  },
+  "tiers": [
+   {
+    "level": 1,
+    "lo": 8,
+    "hi": 15
+   },
+   {
+    "level": 8,
+    "lo": 16,
+    "hi": 28
+   },
+   {
+    "level": 16,
+    "lo": 29,
+    "hi": 45
+   }
+  ],
+  "weight": 10
+ },
+ "armor": {
+  "id": "armor",
+  "slots": [
+   "helmet",
+   "chest",
+   "boots"
+  ],
+  "mod": {
+   "kind": "flat",
+   "stat": "armor"
+  },
+  "tiers": [
+   {
+    "level": 1,
+    "lo": 20,
+    "hi": 40
+   },
+   {
+    "level": 8,
+    "lo": 41,
+    "hi": 80
+   },
+   {
+    "level": 16,
+    "lo": 81,
+    "hi": 140
+   }
+  ],
+  "weight": 10
+ },
+ "evasion": {
+  "id": "evasion",
+  "slots": [
+   "helmet",
+   "chest",
+   "boots"
+  ],
+  "mod": {
+   "kind": "flat",
+   "stat": "evasion"
+  },
+  "tiers": [
+   {
+    "level": 1,
+    "lo": 20,
+    "hi": 40
+   },
+   {
+    "level": 8,
+    "lo": 41,
+    "hi": 80
+   },
+   {
+    "level": 16,
+    "lo": 81,
+    "hi": 140
+   }
+  ],
+  "weight": 10
+ },
+ "resFire": {
+  "id": "resFire",
+  "slots": [
+   "helmet",
+   "chest",
+   "boots",
+   "ring"
+  ],
+  "mod": {
+   "kind": "flat",
+   "stat": "resFire"
+  },
+  "tiers": [
+   {
+    "level": 1,
+    "lo": 0.06,
+    "hi": 0.12
+   },
+   {
+    "level": 8,
+    "lo": 0.13,
+    "hi": 0.2
+   },
+   {
+    "level": 16,
+    "lo": 0.21,
+    "hi": 0.28
+   }
+  ],
+  "weight": 10
+ },
+ "resCold": {
+  "id": "resCold",
+  "slots": [
+   "helmet",
+   "chest",
+   "boots",
+   "ring"
+  ],
+  "mod": {
+   "kind": "flat",
+   "stat": "resCold"
+  },
+  "tiers": [
+   {
+    "level": 1,
+    "lo": 0.06,
+    "hi": 0.12
+   },
+   {
+    "level": 8,
+    "lo": 0.13,
+    "hi": 0.2
+   },
+   {
+    "level": 16,
+    "lo": 0.21,
+    "hi": 0.28
+   }
+  ],
+  "weight": 10
+ },
+ "resLightning": {
+  "id": "resLightning",
+  "slots": [
+   "helmet",
+   "chest",
+   "boots",
+   "ring"
+  ],
+  "mod": {
+   "kind": "flat",
+   "stat": "resLightning"
+  },
+  "tiers": [
+   {
+    "level": 1,
+    "lo": 0.06,
+    "hi": 0.12
+   },
+   {
+    "level": 8,
+    "lo": 0.13,
+    "hi": 0.2
+   },
+   {
+    "level": 16,
+    "lo": 0.21,
+    "hi": 0.28
+   }
+  ],
+  "weight": 10
+ },
+ "lifeRegen": {
+  "id": "lifeRegen",
+  "slots": [
+   "chest",
+   "ring"
+  ],
+  "mod": {
+   "kind": "flat",
+   "stat": "lifeRegen"
+  },
+  "tiers": [
+   {
+    "level": 1,
+    "lo": 1,
+    "hi": 2
+   },
+   {
+    "level": 8,
+    "lo": 2,
+    "hi": 4
+   },
+   {
+    "level": 16,
+    "lo": 4,
+    "hi": 7
+   }
+  ],
+  "weight": 6
+ },
+ "manaRegen": {
+  "id": "manaRegen",
+  "slots": [
+   "helmet",
+   "ring"
+  ],
+  "mod": {
+   "kind": "flat",
+   "stat": "manaRegen"
+  },
+  "tiers": [
+   {
+    "level": 1,
+    "lo": 1,
+    "hi": 2
+   },
+   {
+    "level": 8,
+    "lo": 2,
+    "hi": 3
+   },
+   {
+    "level": 16,
+    "lo": 3,
+    "hi": 5
+   }
+  ],
+  "weight": 6
+ },
+ "moveSpeedInc": {
+  "id": "moveSpeedInc",
+  "slots": [
+   "boots"
+  ],
+  "mod": {
+   "kind": "flat",
+   "stat": "moveSpeedInc"
+  },
+  "tiers": [
+   {
+    "level": 1,
+    "lo": 0.08,
+    "hi": 0.12
+   },
+   {
+    "level": 8,
+    "lo": 0.13,
+    "hi": 0.18
+   },
+   {
+    "level": 16,
+    "lo": 0.19,
+    "hi": 0.25
+   }
+  ],
+  "weight": 20
+ },
+ "addPhys": {
+  "id": "addPhys",
+  "slots": [
+   "weapon",
+   "ring"
+  ],
+  "mod": {
+   "kind": "added",
+   "type": "physical"
+  },
+  "tiers": [
+   {
+    "level": 1,
+    "lo": 2,
+    "hi": 4
+   },
+   {
+    "level": 8,
+    "lo": 5,
+    "hi": 8
+   },
+   {
+    "level": 16,
+    "lo": 9,
+    "hi": 14
+   }
+  ],
+  "weight": 10
+ },
+ "addFire": {
+  "id": "addFire",
+  "slots": [
+   "weapon",
+   "ring"
+  ],
+  "mod": {
+   "kind": "added",
+   "type": "fire"
+  },
+  "tiers": [
+   {
+    "level": 1,
+    "lo": 2,
+    "hi": 4
+   },
+   {
+    "level": 8,
+    "lo": 5,
+    "hi": 8
+   },
+   {
+    "level": 16,
+    "lo": 9,
+    "hi": 14
+   }
+  ],
+  "weight": 10
+ },
+ "addCold": {
+  "id": "addCold",
+  "slots": [
+   "weapon",
+   "ring"
+  ],
+  "mod": {
+   "kind": "added",
+   "type": "cold"
+  },
+  "tiers": [
+   {
+    "level": 1,
+    "lo": 2,
+    "hi": 4
+   },
+   {
+    "level": 8,
+    "lo": 5,
+    "hi": 8
+   },
+   {
+    "level": 16,
+    "lo": 9,
+    "hi": 14
+   }
+  ],
+  "weight": 10
+ },
+ "addLight": {
+  "id": "addLight",
+  "slots": [
+   "weapon",
+   "ring"
+  ],
+  "mod": {
+   "kind": "added",
+   "type": "lightning"
+  },
+  "tiers": [
+   {
+    "level": 1,
+    "lo": 2,
+    "hi": 4
+   },
+   {
+    "level": 8,
+    "lo": 5,
+    "hi": 8
+   },
+   {
+    "level": 16,
+    "lo": 9,
+    "hi": 14
+   }
+  ],
+  "weight": 10
+ },
+ "incPhys": {
+  "id": "incPhys",
+  "slots": [
+   "weapon"
+  ],
+  "mod": {
+   "kind": "inc",
+   "tag": "physical"
+  },
+  "tiers": [
+   {
+    "level": 1,
+    "lo": 0.15,
+    "hi": 0.25
+   },
+   {
+    "level": 8,
+    "lo": 0.26,
+    "hi": 0.4
+   },
+   {
+    "level": 16,
+    "lo": 0.41,
+    "hi": 0.6
+   }
+  ],
+  "weight": 10
+ },
+ "incElem": {
+  "id": "incElem",
+  "slots": [
+   "weapon",
+   "ring"
+  ],
+  "mod": {
+   "kind": "inc",
+   "tag": "elemental"
+  },
+  "tiers": [
+   {
+    "level": 1,
+    "lo": 0.1,
+    "hi": 0.18
+   },
+   {
+    "level": 8,
+    "lo": 0.19,
+    "hi": 0.3
+   },
+   {
+    "level": 16,
+    "lo": 0.31,
+    "hi": 0.45
+   }
+  ],
+  "weight": 6
+ },
+ "incAttack": {
+  "id": "incAttack",
+  "slots": [
+   "weapon",
+   "ring"
+  ],
+  "mod": {
+   "kind": "inc",
+   "tag": "attack"
+  },
+  "tiers": [
+   {
+    "level": 1,
+    "lo": 0.08,
+    "hi": 0.14
+   },
+   {
+    "level": 8,
+    "lo": 0.15,
+    "hi": 0.24
+   },
+   {
+    "level": 16,
+    "lo": 0.25,
+    "hi": 0.35
+   }
+  ],
+  "weight": 10
+ },
+ "incArea": {
+  "id": "incArea",
+  "slots": [
+   "helmet",
+   "ring"
+  ],
+  "mod": {
+   "kind": "inc",
+   "tag": "area"
+  },
+  "tiers": [
+   {
+    "level": 1,
+    "lo": 0.08,
+    "hi": 0.14
+   },
+   {
+    "level": 8,
+    "lo": 0.15,
+    "hi": 0.24
+   },
+   {
+    "level": 16,
+    "lo": 0.25,
+    "hi": 0.35
+   }
+  ],
+  "weight": 6
+ },
+ "critChance": {
+  "id": "critChance",
+  "slots": [
+   "weapon",
+   "ring"
+  ],
+  "mod": {
+   "kind": "flat",
+   "stat": "critChance"
+  },
+  "tiers": [
+   {
+    "level": 1,
+    "lo": 0.01,
+    "hi": 0.02
+   },
+   {
+    "level": 8,
+    "lo": 0.02,
+    "hi": 0.035
+   },
+   {
+    "level": 16,
+    "lo": 0.035,
+    "hi": 0.05
+   }
+  ],
+  "weight": 10
+ },
+ "critMulti": {
+  "id": "critMulti",
+  "slots": [
+   "weapon",
+   "ring"
+  ],
+  "mod": {
+   "kind": "flat",
+   "stat": "critMulti"
+  },
+  "tiers": [
+   {
+    "level": 1,
+    "lo": 0.1,
+    "hi": 0.18
+   },
+   {
+    "level": 8,
+    "lo": 0.19,
+    "hi": 0.28
+   },
+   {
+    "level": 16,
+    "lo": 0.29,
+    "hi": 0.4
+   }
+  ],
+  "weight": 10
+ },
+ "actionSpeed": {
+  "id": "actionSpeed",
+  "slots": [
+   "weapon",
+   "ring",
+   "boots"
+  ],
+  "mod": {
+   "kind": "flat",
+   "stat": "actionSpeed"
+  },
+  "tiers": [
+   {
+    "level": 1,
+    "lo": 0.04,
+    "hi": 0.07
+   },
+   {
+    "level": 8,
+    "lo": 0.08,
+    "hi": 0.11
+   },
+   {
+    "level": 16,
+    "lo": 0.12,
+    "hi": 0.16
+   }
+  ],
+  "weight": 10
+ }
+}

@@ -10,7 +10,6 @@ export interface ClassDef {
   basicAttack: string;
   skills: string[];
   mods: Mod[];
-  startingGear: Mod[];
 }
 
 export interface MonsterDef {

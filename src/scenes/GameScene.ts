@@ -5,16 +5,28 @@ import {
   type Defender, type Hit,
 } from '../core/damage';
 import type { SkillDef } from '../core/types';
-import { CLASSES, MONSTERS, SKILLS, type MonsterDef } from '../data';
+import { classOf, loadBuild, pickUp, saveBuild, statsFor, type Build } from '../core/build';
+import { generateItem, type Item, type Rarity } from '../core/items';
+import { MONSTERS, SKILLS, type MonsterDef } from '../data';
 import { Joystick } from '../ui/Joystick';
+import { InventoryUI } from '../ui/Inventory';
 
-// 2단계 전투 프로토타입: 이동, 자동 기본공격, 스킬 1개, 몬스터 1종
+// 전투 프로토타입
+// 2단계: 이동, 자동 기본공격, 스킬 1개, 몬스터 1종
+// 3단계: 드랍 → 줍기 → 착용 → 스탯 반영 (장비는 죽어도 유지, 로컬 저장)
 
 const WORLD = 2400;
 const PLAYER_RADIUS = 16;
 const MAX_MONSTERS = 35;
 /** 몬스터 레벨이 1 오르는 데 걸리는 시간(초) */
 const LEVEL_UP_EVERY = 45;
+/** 몬스터 처치 시 장비가 떨어질 확률 */
+const DROP_CHANCE = 0.2;
+const PICKUP_RADIUS = 50;
+const RARITY_COLOR: Record<Rarity, number> = { normal: 0xc9ccd2, magic: 0x7aa7ff, rare: 0xffd54f };
+
+/** 장비는 씬을 다시 시작해도(죽어도) 유지 */
+let persistentBuild: Build | null = null;
 
 class Monster extends Phaser.Physics.Arcade.Image {
   def!: MonsterDef;
@@ -29,9 +41,13 @@ class Monster extends Phaser.Physics.Arcade.Image {
 }
 
 interface FloatText { text: Phaser.GameObjects.Text; life: number; vy: number }
+interface Drop { item: Item; gem: Phaser.GameObjects.Rectangle; label: Phaser.GameObjects.Text }
 
 export class GameScene extends Phaser.Scene {
+  private build!: Build;
   private stats!: StatSheet;
+  private inventory!: InventoryUI;
+  private drops: Drop[] = [];
   private basic!: SkillDef;
   private skill!: SkillDef;
   private player!: Phaser.Physics.Arcade.Image;
@@ -83,11 +99,28 @@ export class GameScene extends Phaser.Scene {
     this.scale.on('resize', this.layout, this);
     this.events.once('shutdown', () => this.scale.off('resize', this.layout, this));
     this.layout();
+
+    this.inventory = new InventoryUI(
+      () => this.build,
+      () => this.onGearChanged(),
+      (open) => (open ? this.scene.pause() : this.scene.resume()),
+    );
+    this.events.once('shutdown', () => this.inventory.destroy());
+
+    // 테스트용: 주소에 ?debug 가 있으면 콘솔에서 씬에 접근 가능
+    if (new URLSearchParams(location.search).has('debug')) (window as unknown as { hero: GameScene }).hero = this;
+  }
+
+  /** 디버그: 플레이어 발밑에 장비를 떨어뜨림 */
+  debugDrop(count = 1, ilvl = 1) {
+    for (let i = 0; i < count; i++) this.spawnDrop(this.player.x + 80 + i * 20, this.player.y, generateItem(ilvl));
   }
 
   private resetState() {
-    const cls = CLASSES.warrior;
-    this.stats = new StatSheet([...cls.mods, ...cls.startingGear]);
+    persistentBuild ??= loadBuild();
+    this.build = persistentBuild;
+    const cls = classOf(this.build);
+    this.stats = statsFor(this.build);
     this.basic = SKILLS[cls.basicAttack];
     this.skill = SKILLS[cls.skills[0]];
     this.life = this.stats.flat.maxLife;
@@ -101,6 +134,25 @@ export class GameScene extends Phaser.Scene {
     this.kills = 0;
     this.dead = false;
     this.floats = [];
+    this.drops = [];
+  }
+
+  /** 장비가 바뀌면 스탯을 다시 계산. 생명력 등은 비율을 유지 */
+  private onGearChanged() {
+    const old = this.stats.flat;
+    const lifeR = this.life / old.maxLife;
+    const manaR = this.mana / old.maxMana;
+    const shieldR = old.maxShield > 0 ? this.shield / old.maxShield : 1;
+    this.stats = statsFor(this.build);
+    const f = this.stats.flat;
+    if (!this.dead) {
+      this.life = f.maxLife * lifeR;
+      this.mana = f.maxMana * manaR;
+      this.shield = f.maxShield * shieldR;
+    }
+    saveBuild(this.build);
+    this.inventory.refreshButton();
+    if (!this.inventory.isOpen && !this.dead) this.drawHud();
   }
 
   // ---------- 그래픽 (도형으로 만든 임시 텍스처) ----------
@@ -169,6 +221,7 @@ export class GameScene extends Phaser.Scene {
     this.updateSpawns(dt);
     this.updateMonsters(dt);
     this.updateCombat(dt);
+    this.updatePickups();
     if (Phaser.Input.Keyboard.JustDown(this.keys.skill) || Phaser.Input.Keyboard.JustDown(this.keys.skill2)) this.castSkill();
 
     this.drawOverlay();
@@ -178,7 +231,7 @@ export class GameScene extends Phaser.Scene {
   private updatePlayer(dt: number) {
     const f = this.stats.flat;
     const v = this.moveVector();
-    this.player.setVelocity(v.x * f.moveSpeed, v.y * f.moveSpeed);
+    this.player.setVelocity(v.x * this.stats.moveSpeed, v.y * this.stats.moveSpeed);
     if (v.lengthSq() > 0.01) this.facing = v.angle();
     this.player.setRotation(this.facing);
 
@@ -336,6 +389,43 @@ export class GameScene extends Phaser.Scene {
     m.setVelocity(0, 0);
     const puff = this.add.circle(x, y, m.def.radius, Number(m.def.color), 0.6).setDepth(4);
     this.tweens.add({ targets: puff, scale: 1.8, alpha: 0, duration: 250, onComplete: () => puff.destroy() });
+    if (Math.random() < DROP_CHANCE) this.spawnDrop(x, y, generateItem(m.level));
+  }
+
+  // ---------- 드랍 / 줍기 ----------
+
+  private spawnDrop(x: number, y: number, item: Item) {
+    const color = RARITY_COLOR[item.rarity];
+    const gem = this.add.rectangle(x, y, 12, 12, color).setAngle(45).setStrokeStyle(2, 0x000000, 0.6).setDepth(3);
+    const label = this.add.text(x, y - 16, item.name, {
+      fontFamily: 'system-ui, sans-serif', fontSize: '12px', color: Phaser.Display.Color.IntegerToColor(color).rgba,
+      stroke: '#000000', strokeThickness: 3,
+    }).setOrigin(0.5).setDepth(3);
+    if (item.rarity === 'rare') {
+      this.tweens.add({ targets: gem, scale: 1.4, yoyo: true, repeat: -1, duration: 500 });
+    }
+    this.drops.push({ item, gem, label });
+  }
+
+  private updatePickups() {
+    this.drops = this.drops.filter((d) => {
+      if (Phaser.Math.Distance.Between(this.player.x, this.player.y, d.gem.x, d.gem.y) > PICKUP_RADIUS) return true;
+      const result = pickUp(this.build, d.item);
+      if (result === 'full') {
+        if (!d.label.getData('warned')) {
+          d.label.setData('warned', true);
+          this.floatText(this.player.x, this.player.y - 40, '가방이 가득 찼습니다', '#ff9f43');
+        }
+        return true;
+      }
+      const color = Phaser.Display.Color.IntegerToColor(RARITY_COLOR[d.item.rarity]).rgba;
+      this.floatText(this.player.x, this.player.y - 40, result === 'equipped' ? `${d.item.name} 착용` : d.item.name, color);
+      d.gem.destroy();
+      d.label.destroy();
+      if (result === 'equipped') this.onGearChanged();
+      else { saveBuild(this.build); this.inventory.refreshButton(); }
+      return false;
+    });
   }
 
   private die() {
@@ -346,7 +436,7 @@ export class GameScene extends Phaser.Scene {
     const t = Math.floor(this.elapsed);
     this.add.rectangle(0, 0, width, height, 0x000000, 0.6).setOrigin(0).setScrollFactor(0).setDepth(2000);
     this.add.text(width / 2, height / 2,
-      `쓰러졌습니다\n\n처치 ${this.kills} · 생존 ${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')} · 위험도 ${this.monsterLevel()}\n\n화면을 누르거나 Enter로 다시 시작`,
+      `쓰러졌습니다\n\n처치 ${this.kills} · 생존 ${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')} · 위험도 ${this.monsterLevel()}\n장비는 그대로 남습니다\n\n화면을 누르거나 Enter로 다시 시작`,
       { fontFamily: 'system-ui, sans-serif', fontSize: '22px', color: '#ffffff', align: 'center' },
     ).setOrigin(0.5).setScrollFactor(0).setDepth(2001);
   }

@@ -17,7 +17,7 @@ const zeroFlat = (): FlatTotals => ({
   armor: 0, evasion: 0,
   resFire: 0, resCold: 0, resLightning: 0,
   critChance: 0, critMulti: 0,
-  actionSpeed: 0, moveSpeed: 0,
+  actionSpeed: 0, moveSpeed: 0, moveSpeedInc: 0,
 });
 
 /**
@@ -72,5 +72,10 @@ export class StatSheet {
   /** 행동 속도 배수 (1 = 기본) */
   get actionSpeed(): number {
     return 1 + this.flat.actionSpeed;
+  }
+
+  /** 초당 이동 거리(px) */
+  get moveSpeed(): number {
+    return this.flat.moveSpeed * (1 + this.flat.moveSpeedInc);
   }
 }

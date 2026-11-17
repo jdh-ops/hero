@@ -13,7 +13,8 @@ export type Tag =
   | 'projectile' | 'area'       // 전달
   | 'instant' | 'sustained'     // 시간
   | Attribute                   // 연동 능력치
-  | DamageType;                 // 타입
+  | DamageType                  // 타입
+  | 'elemental';                // 화염·냉기·번개 공통
 
 /** 고정값으로 더해지는 스탯 */
 export type FlatStat =
@@ -22,7 +23,7 @@ export type FlatStat =
   | 'armor' | 'evasion'
   | 'resFire' | 'resCold' | 'resLightning'
   | 'critChance' | 'critMulti'
-  | 'actionSpeed' | 'moveSpeed';
+  | 'actionSpeed' | 'moveSpeed' | 'moveSpeedInc';
 
 /**
  * 스탯 수정치. 장비 옵션·특성·보조 젬이 모두 이 형태를 쓴다.
