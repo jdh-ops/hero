@@ -4,6 +4,7 @@ import { averageHit, critChance, expectedDps } from './damage';
 import { itemMods, makeItem, type Item, type Slot } from './items';
 import { SUPPORT_SOCKETS, canSupport, resolveSkill, type ActiveSkill } from './skills';
 import type { Mod } from './types';
+import { levelMods, newProgress, type Progress } from './progress';
 import { CLASSES, SKILLS, SUPPORTS, type ClassDef } from '../data';
 
 export const BAG_SIZE = 40;
@@ -18,6 +19,9 @@ export interface Build {
   gems: Record<string, number>;
   /** 스킬별 보조 젬 칸 (젬 id 또는 null) */
   sockets: Record<string, (string | null)[]>;
+  level: number;
+  xp: number;
+  progress: Progress;
 }
 
 export interface SaveData extends Build {
@@ -32,6 +36,9 @@ export function newBuild(classId = 'warrior'): Build {
     bag: [],
     gems: { sup_focus: 1 },
     sockets: {},
+    level: 1,
+    xp: 0,
+    progress: newProgress(),
   };
 }
 
@@ -41,7 +48,7 @@ export function classOf(build: Build): ClassDef {
 
 /** 직업 + 장비 수정치 */
 export function baseMods(build: Build, equipment = build.equipment): Mod[] {
-  const mods = [...classOf(build).mods];
+  const mods = [...classOf(build).mods, ...levelMods(build.level)];
   for (const item of Object.values(equipment)) if (item) mods.push(...itemMods(item));
   return mods;
 }
@@ -200,6 +207,10 @@ export function loadBuild(): Build {
           // 4단계 이전 세이브에는 없음
           gems: data.gems ?? { sup_focus: 1 },
           sockets: data.sockets ?? {},
+          // 5단계 이전 세이브에는 없음
+          level: data.level ?? 1,
+          xp: data.xp ?? 0,
+          progress: { ...newProgress(), ...data.progress, story: { ...newProgress().story, ...data.progress?.story } },
         };
       }
     }

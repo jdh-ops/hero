@@ -105,13 +105,13 @@ export function makeItem(baseId: string, rarity: Rarity, ilvl: number, rng: Rng 
   return { uid: newUid(), baseId, name, slot: base.slot, rarity, ilvl, implicit: base.implicit, affixes };
 }
 
-/** 몬스터 레벨 = 아이템 레벨. 그 레벨 이하에서 나오는 장비 중 하나 */
-export function generateItem(ilvl: number, rng: Rng = Math.random): Item {
+/** 몬스터 레벨 = 아이템 레벨. 그 레벨 이하에서 나오는 장비 중 하나. rarity 를 안 주면 기본 확률 */
+export function generateItem(ilvl: number, rng: Rng = Math.random, forcedRarity?: Rarity): Item {
   const slot = pick(SLOTS, rng);
   const candidates = Object.values(BASES).filter((b) => b.slot === slot && b.level <= ilvl);
   // 높은 단계 장비가 나올 수 있으면 그쪽을 더 자주
   const base = pickWeighted(candidates, (b) => 1 + b.level, rng);
-  const rarity = pickWeighted(Object.keys(RARITY_RULES) as Rarity[], (r) => RARITY_RULES[r].weight, rng);
+  const rarity = forcedRarity ?? pickWeighted(Object.keys(RARITY_RULES) as Rarity[], (r) => RARITY_RULES[r].weight, rng);
   return makeItem(base.id, rarity, ilvl, rng);
 }
 

@@ -9,24 +9,24 @@ import { activeSkills, classOf, loadBuild, pickUp, pickUpGem, saveBuild, statsFo
 import type { ActiveSkill } from '../core/skills';
 import type { StatSheet as Sheet } from '../core/stats';
 import { generateItem, type Item, type Rarity } from '../core/items';
-import { MONSTERS, SKILLS, SUPPORTS, type MonsterDef } from '../data';
+import { MAPS, MONSTERS, SKILLS, SUPPORTS, type MapDef, type MonsterDef } from '../data';
+import {
+  addXp, areaLevel, dropTableFor, mapOf, monsterXp, recordClear, rollGem, rollItemRarity, runName, xpToNext,
+  type RunConfig,
+} from '../core/progress';
 import { Joystick } from '../ui/Joystick';
 import { InventoryUI } from '../ui/Inventory';
+import { MapSelectUI } from '../ui/MapSelect';
 
 // 전투 프로토타입
 // 2단계: 이동, 자동 기본공격, 스킬 1개, 몬스터 1종
 // 3단계: 드랍 → 줍기 → 착용 → 스탯 반영 (장비는 죽어도 유지, 로컬 저장)
 // 4단계: 스킬 4개(범위·부채꼴·투사체·장판) + 보조 젬
+// 5단계: 지도(스토리 3난이도 × 4맵 → 맵핑 티어), 맵별 몬스터, 드랍 테이블, 캐릭터 레벨
 
 const WORLD = 2400;
 const PLAYER_RADIUS = 16;
 const MAX_MONSTERS = 35;
-/** 몬스터 레벨이 1 오르는 데 걸리는 시간(초) */
-const LEVEL_UP_EVERY = 45;
-/** 몬스터 처치 시 장비가 떨어질 확률 */
-const DROP_CHANCE = 0.2;
-/** 몬스터 처치 시 보조 젬이 떨어질 확률 */
-const GEM_DROP_CHANCE = 0.05;
 const GEM_COLOR = 0x66d17a;
 const PICKUP_RADIUS = 50;
 const RARITY_COLOR: Record<Rarity, number> = { normal: 0xc9ccd2, magic: 0x7aa7ff, rare: 0xffd54f };
@@ -50,11 +50,19 @@ interface FloatText { text: Phaser.GameObjects.Text; life: number; vy: number }
 interface Drop { item?: Item; gemId?: string; gem: Phaser.GameObjects.Shape; label: Phaser.GameObjects.Text }
 interface Projectile { img: Phaser.GameObjects.Arc; vx: number; vy: number; travelled: number; maxDist: number; pierce: number; hit: Set<Monster>; skill: ActiveSkill }
 interface Ground { x: number; y: number; r: number; left: number; tick: number; gfx: Phaser.GameObjects.Arc; skill: ActiveSkill }
+interface EnemyShot { img: Phaser.GameObjects.Arc; vx: number; vy: number; left: number; hit: Hit }
 interface SkillButton { box: Phaser.GameObjects.Container; gfx: Phaser.GameObjects.Graphics; r: number }
 
 export class GameScene extends Phaser.Scene {
   private build!: Build;
-  private stats!: StatSheet;
+  /** 지금 하는 판. null 이면 지도 화면 */
+  private run: RunConfig | null = null;
+  private map: MapDef = MAPS.maps[0];
+  private level = 1;
+  private cleared = false;
+  private mapSelect?: MapSelectUI;
+  private domButtons: HTMLElement[] = [];
+  private enemyShots: EnemyShot[] = [];  private stats!: StatSheet;
   private inventory!: InventoryUI;
   private drops: Drop[] = [];
   private basic!: SkillDef;
@@ -90,11 +98,15 @@ export class GameScene extends Phaser.Scene {
     super('game');
   }
 
+  init(data: { run?: RunConfig }) {
+    this.run = data?.run ?? null;
+  }
+
   create() {
     this.resetState();
     this.makeTextures();
 
-    this.add.tileSprite(0, 0, WORLD, WORLD, 'grid').setOrigin(0);
+    this.add.tileSprite(0, 0, WORLD, WORLD, `grid_${this.map.id}`).setOrigin(0);
     this.physics.world.setBounds(0, 0, WORLD, WORLD);
 
     this.player = this.physics.add.image(WORLD / 2, WORLD / 2, 'player').setDepth(10);
@@ -116,7 +128,14 @@ export class GameScene extends Phaser.Scene {
       () => this.onBuildChanged(),
       (open) => (open ? this.scene.pause() : this.scene.resume()),
     );
-    this.events.once('shutdown', () => this.inventory.destroy());
+    this.events.once('shutdown', () => {
+      this.inventory.destroy();
+      this.mapSelect?.destroy();
+      for (const el of this.domButtons) el.remove();
+    });
+
+    if (!this.run) this.openMapSelect();
+    else this.addDomButton('지도로', 'leave', () => this.backToMap());
 
     // 테스트용: 주소에 ?debug 가 있으면 콘솔에서 씬에 접근 가능
     if (new URLSearchParams(location.search).has('debug')) (window as unknown as { hero: GameScene }).hero = this;
@@ -125,6 +144,43 @@ export class GameScene extends Phaser.Scene {
   /** 디버그: 플레이어 발밑에 장비를 떨어뜨림 */
   debugDrop(count = 1, ilvl = 1) {
     for (let i = 0; i < count; i++) this.spawnDrop(this.player.x + 80 + i * 20, this.player.y, generateItem(ilvl));
+  }
+
+  private openMapSelect() {
+    this.player.setVisible(false);
+    for (const b of this.skillBtns) b.box.setVisible(false);
+    this.hud.setVisible(false);
+    this.hudText.setVisible(false);
+    this.infoText.setVisible(false);
+    this.hintText?.setVisible(false);
+    this.mapSelect = new MapSelectUI(
+      () => this.build,
+      (run) => this.scene.restart({ run }),
+      () => this.inventory.toggle(true),
+    );
+  }
+
+  private backToMap() {
+    saveBuild(this.build);
+    this.scene.restart({});
+  }
+
+  private addDomButton(text: string, cls: string, onClick: () => void): HTMLButtonElement {
+    const el = document.createElement('button');
+    el.type = 'button';
+    el.className = `hud-btn ${cls}`;
+    el.textContent = text;
+    el.addEventListener('click', onClick);
+    el.addEventListener('pointerdown', (e) => e.stopPropagation());
+    document.body.append(el);
+    this.domButtons.push(el);
+    return el;
+  }
+
+  /** 디버그: 맵을 바로 클리어 */
+  debugClear() {
+    this.kills = MAPS.killTarget;
+    this.checkClear();
   }
 
   /** 디버그: 보조 젬을 하나씩 모두 줌 */
@@ -136,7 +192,12 @@ export class GameScene extends Phaser.Scene {
   private resetState() {
     persistentBuild ??= loadBuild();
     this.build = persistentBuild;
-    const cls = classOf(this.build);
+    this.map = this.run ? mapOf(this.run) : MAPS.maps[0];
+    this.level = this.run ? areaLevel(this.run) : 1;
+    this.cleared = false;
+    this.enemyShots = [];
+    this.domButtons = [];
+    this.mapSelect = undefined;    const cls = classOf(this.build);
     this.stats = statsFor(this.build);
     this.basic = SKILLS[cls.basicAttack];
     this.skills = activeSkills(this.build);
@@ -181,20 +242,30 @@ export class GameScene extends Phaser.Scene {
     if (this.textures.exists('player')) return;
     const g = this.make.graphics({}, false);
 
+    for (const m of MAPS.maps) {
+      g.fillStyle(Number(m.bg)).fillRect(0, 0, 64, 64);
+      g.lineStyle(1, Number(m.line)).strokeRect(0, 0, 64, 64);
+      g.generateTexture(`grid_${m.id}`, 64, 64).clear();
+    }
+
     g.fillStyle(0x4f8cff).fillCircle(20, 20, PLAYER_RADIUS);
     g.fillStyle(0xffffff).fillTriangle(30, 14, 30, 26, 38, 20); // 바라보는 방향
     g.generateTexture('player', 40, 40).clear();
 
     for (const def of Object.values(MONSTERS)) {
       const r = def.radius;
-      g.fillStyle(Number(def.color)).fillCircle(r + 2, r + 2, r);
+      g.fillStyle(Number(def.color));
+      if (def.kind === 'ranged') {
+        // 원거리 몹은 마름모
+        g.fillPoints([{ x: r + 2, y: 2 }, { x: r * 2 + 2, y: r + 2 }, { x: r + 2, y: r * 2 + 2 }, { x: 2, y: r + 2 }], true);
+      } else {
+        g.fillCircle(r + 2, r + 2, r);
+      }
       g.fillStyle(0x000000, 0.5).fillCircle(r - 3, r - 1, 3).fillCircle(r + 7, r - 1, 3);
       g.generateTexture(def.id, r * 2 + 4, r * 2 + 4).clear();
     }
 
-    g.fillStyle(0x1b1e26).fillRect(0, 0, 64, 64);
-    g.lineStyle(1, 0x262a35).strokeRect(0, 0, 64, 64);
-    g.generateTexture('grid', 64, 64).destroy();
+    g.destroy();
   }
 
   // ---------- 입력 ----------
@@ -210,13 +281,13 @@ export class GameScene extends Phaser.Scene {
 
     this.joystick = new Joystick(this, (p) => this.inJoystickZone(p));
     this.input.on('pointerdown', (p: Phaser.Input.Pointer) => {
-      if (this.dead) this.scene.restart();
+      if (this.dead) this.backToMap();
       else {
         const i = this.skillButtonAt(p);
         if (i >= 0) this.castSkill(i);
       }
     });
-    kb.on('keydown-ENTER', () => this.dead && this.scene.restart());
+    kb.on('keydown-ENTER', () => this.dead && this.backToMap());
   }
 
   /** 누른 위치의 스킬 버튼 번호 (없으면 -1). 손가락이라 실제보다 조금 넓게 */
@@ -239,7 +310,7 @@ export class GameScene extends Phaser.Scene {
   update(_time: number, deltaMs: number) {
     const dt = Math.min(deltaMs / 1000, 0.05);
     this.updateFloats(dt);
-    if (this.dead) return;
+    if (this.dead || !this.run) return;
 
     this.elapsed += dt;
     this.updatePlayer(dt);
@@ -248,6 +319,7 @@ export class GameScene extends Phaser.Scene {
     this.updateCombat(dt);
     this.updateProjectiles(dt);
     this.updateGrounds(dt);
+    this.updateEnemyShots(dt);
     this.updatePickups();
     const k = this.keys, J = Phaser.Input.Keyboard.JustDown;
     if (J(k.space) || J(k.k1)) this.castSkill(0);
@@ -275,15 +347,15 @@ export class GameScene extends Phaser.Scene {
   }
 
   private monsterLevel() {
-    return 1 + Math.floor(this.elapsed / LEVEL_UP_EVERY);
+    return this.level;
   }
 
   private updateSpawns(dt: number) {
+    if (this.cleared) return;
     this.spawnTimer -= dt;
     if (this.spawnTimer > 0) return;
-    // 시간이 지날수록 자주 나옴
-    this.spawnTimer = Math.max(0.35, 1.3 - this.elapsed * 0.004);
-    const count = Phaser.Math.Between(1, 1 + Math.floor(this.elapsed / 60));
+    this.spawnTimer = 1.0;
+    const count = Math.random() < 0.35 ? 2 : 1;
     for (let i = 0; i < count; i++) this.spawnMonster();
   }
 
@@ -295,9 +367,13 @@ export class GameScene extends Phaser.Scene {
     const x = Phaser.Math.Clamp(this.player.x + Math.cos(angle) * dist, 20, WORLD - 20);
     const y = Phaser.Math.Clamp(this.player.y + Math.sin(angle) * dist, 20, WORLD - 20);
 
-    const def = MONSTERS.blob;
+    const pick = Phaser.Math.Between(1, this.map.monsters.reduce((a, e) => a + e.weight, 0));
+    let acc = 0;
+    const entry = this.map.monsters.find((e) => (acc += e.weight) >= pick)!;
+    const def = MONSTERS[entry.id];
     const m = this.monsters.get(x, y, def.id) as Monster | null;
     if (!m) return; // 상한 도달
+    m.setTexture(def.id);
     m.setActive(true).setVisible(true).setDepth(5);
     m.body!.enable = true;
     m.setCircle(def.radius, 2, 2);
@@ -317,11 +393,24 @@ export class GameScene extends Phaser.Scene {
   private updateMonsters(dt: number) {
     for (const m of this.activeMonsters()) {
       const d = Phaser.Math.Distance.Between(m.x, m.y, this.player.x, this.player.y);
+      m.attackCd -= dt;
+      if (m.def.kind === 'ranged') {
+        // 거리를 유지하며 투사체
+        const range = m.def.range ?? 300;
+        if (d > range * 0.9) this.physics.moveToObject(m, this.player, m.def.moveSpeed);
+        else if (d < range * 0.5) {
+          const a = Phaser.Math.Angle.Between(this.player.x, this.player.y, m.x, m.y);
+          m.setVelocity(Math.cos(a) * m.def.moveSpeed, Math.sin(a) * m.def.moveSpeed);
+        } else m.setVelocity(0, 0);
+        if (d <= range && m.attackCd <= 0) {
+          m.attackCd = m.def.attackInterval;
+          this.monsterShoots(m);
+        }
+        continue;
+      }
       const reach = m.def.radius + PLAYER_RADIUS + 4;
       if (d > reach - 2) this.physics.moveToObject(m, this.player, m.def.moveSpeed);
       else m.setVelocity(0, 0);
-
-      m.attackCd -= dt;
       if (d <= reach && m.attackCd <= 0) {
         m.attackCd = m.def.attackInterval;
         this.monsterHitsPlayer(m);
@@ -329,11 +418,41 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  private monsterHitsPlayer(m: Monster) {
+  private monsterHit(m: Monster): Hit {
     const scale = 1 + m.def.damagePerLevel * (m.level - 1);
     const amounts = { physical: 0, fire: 0, cold: 0, lightning: 0 };
     amounts[m.def.damageType] = Phaser.Math.FloatBetween(m.def.damageMin, m.def.damageMax) * scale;
-    const hit: Hit = { amounts, crit: false, evadable: true, attackerLevel: m.level };
+    return { amounts, crit: false, evadable: true, attackerLevel: m.level };
+  }
+
+  private monsterShoots(m: Monster) {
+    const a = Phaser.Math.Angle.Between(m.x, m.y, this.player.x, this.player.y);
+    const speed = m.def.projectileSpeed ?? 250;
+    const img = this.add.circle(m.x, m.y, 6, Number(m.def.color)).setStrokeStyle(2, 0xffffff, 0.7).setDepth(11);
+    this.enemyShots.push({ img, vx: Math.cos(a) * speed, vy: Math.sin(a) * speed, left: ((m.def.range ?? 300) * 1.4) / speed, hit: this.monsterHit(m) });
+  }
+
+  private updateEnemyShots(dt: number) {
+    this.enemyShots = this.enemyShots.filter((s) => {
+      s.img.x += s.vx * dt;
+      s.img.y += s.vy * dt;
+      s.left -= dt;
+      if (Phaser.Math.Distance.Between(s.img.x, s.img.y, this.player.x, this.player.y) < PLAYER_RADIUS + 6) {
+        this.playerTakesHit(s.hit);
+        s.img.destroy();
+        return false;
+      }
+      if (s.left <= 0) { s.img.destroy(); return false; }
+      return true;
+    });
+  }
+
+  private monsterHitsPlayer(m: Monster) {
+    this.playerTakesHit(this.monsterHit(m));
+  }
+
+  private playerTakesHit(hit: Hit) {
+    if (this.dead) return;
 
     const f = this.stats.flat;
     const result = mitigate(hit, {
@@ -348,7 +467,9 @@ export class GameScene extends Phaser.Scene {
     this.shield = pools.shield;
     this.life = pools.life;
     this.sinceHit = 0;
-    this.floatText(this.player.x, this.player.y - 24, String(Math.round(result.total)), '#ff6b6b');
+    const colors = { physical: '#ff6b6b', fire: '#ff9a52', cold: '#7fd3ff', lightning: '#ffe45c' };
+    const main = (Object.keys(hit.amounts) as (keyof typeof colors)[]).find((k) => hit.amounts[k] > 0) ?? 'physical';
+    this.floatText(this.player.x, this.player.y - 24, String(Math.round(result.total)), colors[main]);
     this.player.setTintFill(0xff4444);
     this.time.delayedCall(80, () => this.player.clearTint());
     if (this.life <= 0) this.die();
@@ -504,10 +625,47 @@ export class GameScene extends Phaser.Scene {
     m.setVelocity(0, 0);
     const puff = this.add.circle(x, y, m.def.radius, Number(m.def.color), 0.6).setDepth(4);
     this.tweens.add({ targets: puff, scale: 1.8, alpha: 0, duration: 250, onComplete: () => puff.destroy() });
-    if (Math.random() < DROP_CHANCE) this.spawnDrop(x, y, generateItem(m.level));
-    if (Math.random() < GEM_DROP_CHANCE) {
-      this.spawnGemDrop(x + 14, y + 6, Phaser.Utils.Array.GetRandom(Object.keys(SUPPORTS)));
+    if (!this.run) return;
+    const table = dropTableFor(this.run);
+    if (Math.random() < table.itemChance) this.spawnDrop(x, y, generateItem(m.level, Math.random, rollItemRarity(table)));
+    if (Math.random() < table.gemChance) this.spawnGemDrop(x + 14, y + 6, rollGem(table));
+
+    // 경험치
+    const ups = addXp(this.build, monsterXp(m.level, m.def.xp, this.build.level));
+    if (ups > 0) {
+      this.onBuildChanged();
+      const f = this.stats.flat;
+      this.life = f.maxLife;
+      this.mana = f.maxMana;
+      this.floatText(this.player.x, this.player.y - 56, `레벨 업! Lv.${this.build.level}`, '#d1b3ff', true);
     }
+    this.checkClear();
+  }
+
+  private checkClear() {
+    if (this.cleared || !this.run || this.kills < MAPS.killTarget) return;
+    this.cleared = true;
+    recordClear(this.build.progress, this.run);
+    saveBuild(this.build);
+    // 남은 몬스터는 사라짐 (드랍 없음)
+    for (const m of this.activeMonsters()) {
+      m.setActive(false).setVisible(false);
+      m.body!.enable = false;
+    }
+    for (const s of this.enemyShots) s.img.destroy();
+    this.enemyShots = [];
+
+    const banner = document.createElement('div');
+    banner.className = 'clear-banner';
+    banner.innerHTML = `<b>클리어!</b><span>${runName(this.run)}</span><span class="dim">떨어진 아이템을 줍고 돌아가세요</span>`;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = '지도로 돌아가기';
+    btn.addEventListener('click', () => this.backToMap());
+    banner.append(btn);
+    banner.addEventListener('pointerdown', (e) => e.stopPropagation());
+    document.body.append(banner);
+    this.domButtons.push(banner);
   }
 
   // ---------- 드랍 / 줍기 ----------
@@ -573,7 +731,7 @@ export class GameScene extends Phaser.Scene {
     const t = Math.floor(this.elapsed);
     this.add.rectangle(0, 0, width, height, 0x000000, 0.6).setOrigin(0).setScrollFactor(0).setDepth(2000);
     this.add.text(width / 2, height / 2,
-      `쓰러졌습니다\n\n처치 ${this.kills} · 생존 ${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')} · 위험도 ${this.monsterLevel()}\n장비는 그대로 남습니다\n\n화면을 누르거나 Enter로 다시 시작`,
+      `쓰러졌습니다\n\n${this.run ? runName(this.run) : ''}\n처치 ${this.kills}/${MAPS.killTarget} · ${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}\n장비와 레벨은 그대로 남습니다\n\n화면을 누르거나 Enter로 지도로`,
       { fontFamily: 'system-ui, sans-serif', fontSize: '22px', color: '#ffffff', align: 'center' },
     ).setOrigin(0.5).setScrollFactor(0).setDepth(2001);
   }
@@ -689,12 +847,16 @@ export class GameScene extends Phaser.Scene {
 
     const t = Math.floor(this.elapsed);
     this.hudText.setText(
-      `생명력 ${Math.max(0, Math.ceil(this.life))}/${f.maxLife}  보호막 ${Math.floor(this.shield)}/${f.maxShield}  마나 ${Math.floor(this.mana)}/${f.maxMana}`,
+      `Lv.${this.build.level}  생명력 ${Math.max(0, Math.ceil(this.life))}/${f.maxLife}  보호막 ${Math.floor(this.shield)}/${f.maxShield}  마나 ${Math.floor(this.mana)}/${f.maxMana}`,
     );
     this.infoText.setText(
-      `처치 ${this.kills}   ${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}   위험도 ${this.monsterLevel()}\n` +
+      `${this.run ? runName(this.run) : ''} (Lv.${this.level})\n` +
+      `처치 ${Math.min(this.kills, MAPS.killTarget)}/${MAPS.killTarget}   ${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}\n` +
       `기본공격 DPS ${expectedDps(this.stats, this.basic).toFixed(1)}`,
     );
+    // 경험치 바
+    g.fillStyle(0x000000, 0.55).fillRect(14, 54, 224, 6);
+    g.fillStyle(0xb388ff).fillRect(16, 55, 220 * Math.min(1, this.build.xp / xpToNext(this.build.level)), 4);
 
     // 스킬 버튼 + 쿨다운
     this.skillBtns.forEach((b, i) => {

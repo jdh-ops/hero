@@ -1,0 +1,114 @@
+{
+ "maps": [
+  {
+   "id": "fortress",
+   "name": "부서진 요새",
+   "element": "physical",
+   "description": "갑옷을 입은 병사와 석궁병. 방어도가 중요합니다.",
+   "bg": "0x1f1d1b",
+   "line": "0x2c2925",
+   "monsters": [
+    {
+     "id": "rust_soldier",
+     "weight": 3
+    },
+    {
+     "id": "crossbowman",
+     "weight": 1
+    }
+   ]
+  },
+  {
+   "id": "canyon",
+   "name": "잿불 협곡",
+   "element": "fire",
+   "description": "빠른 불씨 정령과 화염 투척꾼. 화염 저항이 필요합니다.",
+   "bg": "0x231816",
+   "line": "0x33221d",
+   "monsters": [
+    {
+     "id": "ember_sprite",
+     "weight": 3
+    },
+    {
+     "id": "flame_thrower",
+     "weight": 1
+    }
+   ]
+  },
+  {
+   "id": "cavern",
+   "name": "서리 동굴",
+   "element": "cold",
+   "description": "단단한 얼음 덩어리와 서리 사수. 냉기 저항이 필요합니다.",
+   "bg": "0x151d24",
+   "line": "0x1f2a33",
+   "monsters": [
+    {
+     "id": "ice_lump",
+     "weight": 3
+    },
+    {
+     "id": "frost_archer",
+     "weight": 1
+    }
+   ]
+  },
+  {
+   "id": "highland",
+   "name": "폭풍 고원",
+   "element": "lightning",
+   "description": "재빠른 전류 벌레와 뇌운 술사. 번개 저항이 필요합니다.",
+   "bg": "0x1d1d14",
+   "line": "0x2b2b1d",
+   "monsters": [
+    {
+     "id": "spark_bug",
+     "weight": 3
+    },
+    {
+     "id": "storm_caller",
+     "weight": 1
+    }
+   ]
+  }
+ ],
+ "story": [
+  {
+   "id": "normal",
+   "name": "보통",
+   "levels": [
+    1,
+    4,
+    7,
+    10
+   ]
+  },
+  {
+   "id": "hard",
+   "name": "어려움",
+   "levels": [
+    14,
+    17,
+    20,
+    23
+   ]
+  },
+  {
+   "id": "hell",
+   "name": "지옥",
+   "levels": [
+    27,
+    30,
+    33,
+    36
+   ]
+  }
+ ],
+ "mapping": {
+  "baseLevel": 40,
+  "perTier": 3,
+  "maxTier": 10
+ },
+ "killTarget": 60
+}

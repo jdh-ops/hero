@@ -74,6 +74,8 @@ export interface SkillDef {
 export interface SupportDef {
   id: string;
   name: string;
+  /** 희귀도: 높은 난이도일수록 희귀한 젬이 잘 나옴 */
+  rarity: 'common' | 'uncommon' | 'rare';
   description: string;
   /** 이 태그 중 하나라도 있는 스킬에만 연결 가능 (없으면 모든 스킬) */
   requires?: Tag[];
