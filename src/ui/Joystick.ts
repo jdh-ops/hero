@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 
 /**
- * 화면 왼쪽 절반을 누르면 그 자리에 생기는 가상 조이스틱.
+ * 정해진 영역(세로: 아래쪽, 가로: 왼쪽 절반)을 누르면 그 자리에 생기는 가상 조이스틱.
  * vector: 길이 0~1 의 이동 방향.
  */
 export class Joystick {
@@ -12,7 +12,8 @@ export class Joystick {
   private readonly thumb: Phaser.GameObjects.Arc;
   private readonly radius = 60;
 
-  constructor(private readonly scene: Phaser.Scene, private readonly isBlocked: (p: Phaser.Input.Pointer) => boolean) {
+  /** inZone: 이 위치를 누르면 조이스틱이 생기는지 */
+  constructor(scene: Phaser.Scene, private readonly inZone: (p: Phaser.Input.Pointer) => boolean) {
     this.base = scene.add.circle(0, 0, this.radius, 0xffffff, 0.08).setStrokeStyle(2, 0xffffff, 0.25);
     this.thumb = scene.add.circle(0, 0, 26, 0xffffff, 0.3);
     for (const o of [this.base, this.thumb]) o.setScrollFactor(0).setDepth(1000).setVisible(false);
@@ -24,7 +25,7 @@ export class Joystick {
   }
 
   private onDown(p: Phaser.Input.Pointer) {
-    if (this.pointerId !== null || p.x > this.scene.scale.width * 0.5 || this.isBlocked(p)) return;
+    if (this.pointerId !== null || !this.inZone(p)) return;
     this.pointerId = p.id;
     this.origin.set(p.x, p.y);
     this.base.setPosition(p.x, p.y).setVisible(true);

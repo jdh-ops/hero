@@ -71,6 +71,7 @@ export class GameScene extends Phaser.Scene {
   private hud!: Phaser.GameObjects.Graphics;
   private hudText!: Phaser.GameObjects.Text;
   private infoText!: Phaser.GameObjects.Text;
+  private hintText?: Phaser.GameObjects.Text;
   private skillBtn!: Phaser.GameObjects.Container;
   private skillBtnGfx!: Phaser.GameObjects.Graphics;
   private floats: FloatText[] = [];
@@ -187,7 +188,7 @@ export class GameScene extends Phaser.Scene {
       w: K.W, a: K.A, s: K.S, d: K.D, skill: K.SPACE, skill2: K.J,
     }) as GameScene['keys'];
 
-    this.joystick = new Joystick(this, (p) => this.isOnSkillButton(p));
+    this.joystick = new Joystick(this, (p) => this.inJoystickZone(p));
     this.input.on('pointerdown', (p: Phaser.Input.Pointer) => {
       if (this.dead) this.scene.restart();
       else if (this.isOnSkillButton(p)) this.castSkill();
@@ -488,7 +489,7 @@ export class GameScene extends Phaser.Scene {
 
   private createHud() {
     this.hud = this.add.graphics().setScrollFactor(0).setDepth(1000);
-    const style = { fontFamily: 'system-ui, sans-serif', fontSize: '14px', color: '#e8e6e3' };
+    const style = { fontFamily: 'system-ui, sans-serif', fontSize: '15px', color: '#e8e6e3' };
     this.hudText = this.add.text(16, 62, '', style).setScrollFactor(0).setDepth(1000);
     this.infoText = this.add.text(0, 16, '', { ...style, align: 'right', color: '#9aa0aa' })
       .setOrigin(1, 0).setScrollFactor(0).setDepth(1000);
@@ -499,18 +500,32 @@ export class GameScene extends Phaser.Scene {
     }).setOrigin(0.5);
     this.skillBtn = this.add.container(0, 0, [this.skillBtnGfx, label]).setScrollFactor(0).setDepth(1000);
 
-    const hint = this.sys.game.device.input.touch
-      ? '왼쪽을 눌러 이동 · 오른쪽 버튼으로 스킬'
-      : '이동 WASD / 방향키 · 스킬 Space';
-    const h = this.add.text(this.scale.width / 2, this.scale.height - 40, `${hint} · 기본공격은 자동`, style)
+    const touch = this.sys.game.device.input.touch;
+    const hint = touch
+      ? (this.isPortrait() ? '아래쪽을 눌러 끌면 이동\n오른쪽 아래 버튼으로 스킬' : '왼쪽을 눌러 이동 · 오른쪽 버튼으로 스킬')
+      : '이동 WASD / 방향키 · 스킬 Space · 가방 I';
+    this.hintText = this.add.text(0, 0, `${hint}\n기본공격은 자동`, { ...style, align: 'center' })
       .setOrigin(0.5).setScrollFactor(0).setDepth(1000);
-    this.tweens.add({ targets: h, alpha: 0, delay: 5000, duration: 800, onComplete: () => h.destroy() });
+    this.tweens.add({ targets: this.hintText, alpha: 0, delay: 5000, duration: 800, onComplete: () => this.hintText?.destroy() });
+  }
+
+  isPortrait() {
+    return this.scale.height > this.scale.width;
+  }
+
+  /** 세로: 화면 아래쪽 / 가로: 왼쪽 절반을 누르면 조이스틱 */
+  private inJoystickZone(p: Phaser.Input.Pointer) {
+    if (this.isOnSkillButton(p)) return false;
+    return this.isPortrait() ? p.y > this.scale.height * 0.4 : p.x < this.scale.width * 0.5;
   }
 
   private layout() {
     const { width, height } = this.scale;
-    this.skillBtn.setPosition(width - 90, height - 90);
+    const portrait = this.isPortrait();
+    // 세로 화면에서는 엄지가 닿기 쉽게 버튼을 조금 위로
+    this.skillBtn.setPosition(width - 86, height - (portrait ? 120 : 90));
     this.infoText.setX(width - 16);
+    this.hintText?.setPosition(width / 2, portrait ? height * 0.62 : height - 50);
   }
 
   private drawHud() {

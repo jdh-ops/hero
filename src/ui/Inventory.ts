@@ -74,7 +74,8 @@ export class InventoryUI {
   /** 가방 버튼의 개수 표시 */
   refreshButton() {
     const n = this.getBuild().bag.length;
-    this.button.innerHTML = `가방 <span class="badge">${n}/${BAG_SIZE}</span> <span class="badge">I</span>`;
+    const key = matchMedia('(pointer: coarse)').matches ? '' : ' <span class="badge">I</span>';
+    this.button.innerHTML = `가방 <span class="badge">${n}/${BAG_SIZE}</span>${key}`;
   }
 
   private onKey = (e: KeyboardEvent) => {
@@ -132,7 +133,7 @@ export class InventoryUI {
     const slots = SLOTS.map((s) => {
       const item = b.equipment[s];
       return `<div class="inv-slot"><span class="label">${SLOT_NAMES[s]}</span>${
-        item ? tile(item, 'equip') : '<button type="button" class="inv-tile empty" disabled>비어 있음</button>'}</div>`;
+        item ? tile(item, 'equip') : `<button type="button" class="inv-tile empty" disabled><span class="slot">${SLOT_NAMES[s]}</span><span class="name">비어 있음</span></button>`}</div>`;
     }).join('');
 
     const statRows = (Object.keys(SUMMARY_LABELS) as (keyof Summary)[])
@@ -143,10 +144,11 @@ export class InventoryUI {
       : '<p class="inv-empty">비어 있음. 몬스터를 처치하면 장비가 떨어집니다.</p>';
 
     this.root.innerHTML = `
-      <header><h2>장비</h2><span class="hint">I · Tab · Esc 로 닫기 (열려 있는 동안 게임 일시정지)</span>
+      <header><h2>장비</h2><span class="hint">I · Tab · Esc 로 닫기 · 열려 있는 동안 일시정지</span>
         <button type="button" data-act="close">닫기</button></header>
-      <section><h3>착용 중</h3><div class="inv-slots">${slots}</div><dl class="inv-stats">${statRows}</dl></section>
+      <section><h3>착용 중</h3><div class="inv-slots">${slots}</div><dl class="inv-stats wide-only">${statRows}</dl></section>
       <section><h3>가방 ${b.bag.length}/${BAG_SIZE}</h3>${bag}</section>
+      <section class="narrow-only"><h3>능력치</h3><dl class="inv-stats">${statRows}</dl></section>
       <section class="inv-detail">${sel ? this.detail(b, sel, cur) : '<p class="inv-empty">장비를 누르면 옵션과 비교가 보입니다.</p>'}</section>`;
   }
 

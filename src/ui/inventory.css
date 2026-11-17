@@ -74,6 +74,7 @@
 .inv-slots { display: grid; gap: 6px; }
 .inv-slot { display: grid; grid-template-columns: 40px minmax(0, 1fr); align-items: center; gap: 8px; }
 .inv-slot .label { color: var(--inv-dim); font-size: 12px; }
+.narrow-only { display: none; }
 .inv-stats { margin-top: 12px; display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; font-size: 12px; font-variant-numeric: tabular-nums; }
 .inv-stats dt { color: var(--inv-dim); }
 .inv-stats dd { margin: 0; text-align: right; }
@@ -114,4 +115,44 @@
 @media (max-width: 760px) {
   .inv { grid-template-columns: minmax(150px, 1fr) minmax(0, 1.3fr) minmax(180px, 1.2fr); gap: 8px; }
   .inv-bag { grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); }
+}
+
+/* 세로 화면(모바일 기본): 한 줄로 쌓고, 선택한 장비 정보는 아래에 붙여 둠 */
+@media (orientation: portrait) and (max-width: 700px) {
+  .inv {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    overflow-y: auto;
+    padding-bottom: 0;
+    background: rgb(12, 14, 19);
+  }
+  .inv header { position: sticky; top: 0; z-index: 2; background: rgb(12, 14, 19); padding-bottom: 4px; }
+  .inv header .hint { display: none; }
+  .inv header button { margin-left: auto; }
+  .inv section { flex: none; overflow: visible; }
+  .inv .wide-only { display: none; }
+  .inv section.narrow-only { display: block; }
+  .narrow-only .inv-stats { margin-top: 0; }
+  .inv-slots { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .inv-slot { grid-template-columns: minmax(0, 1fr); }
+  .inv-slot .label { display: none; }
+  .inv-stats { grid-template-columns: 1fr auto 1fr auto; column-gap: 12px; }
+  .inv-bag { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); }
+  .inv-detail {
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
+    max-height: 46vh;
+    overflow-y: auto !important;
+    margin-bottom: max(8px, env(safe-area-inset-bottom, 0px));
+    box-shadow: 0 -10px 20px rgba(0, 0, 0, 0.55);
+    display: flex;
+    flex-direction: column;
+  }
+  /* 버튼이 가려지지 않게 이름 바로 아래로 */
+  .inv-detail > * { order: 3; }
+  .inv-detail .title { order: 0; }
+  .inv-detail .sub { order: 1; }
+  .inv-detail .inv-actions { order: 2; margin-bottom: 10px; }
 }
