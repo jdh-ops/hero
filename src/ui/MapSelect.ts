@@ -94,7 +94,7 @@ export class MapSelectUI {
         <div class="lv"><span>Lv.${b.level}</span><span class="xp"><i style="width:${xpPct}%"></i></span></div>
         <button type="button" data-act="inv">가방·스킬·상점</button>
       </header>
-      <div class="wallet">${Object.values(CURRENCIES).map((c) => `<span class="cur" style="--c:#${Number(c.color).toString(16).padStart(6, '0')}">${c.name} <b>${b.wallet[c.id] ?? 0}</b></span>`).join('')}</div>
+      <div class="wallet">${Object.values(CURRENCIES).filter((c) => c.id === 'gold' || (b.wallet[c.id] ?? 0) > 0).map((c) => `<span class="cur" style="--c:#${Number(c.color).toString(16).padStart(6, '0')}">${c.name} <b>${b.wallet[c.id] ?? 0}</b></span>`).join('')}</div>
       <nav class="maps-tabs">${tabs}</nav>
       ${body}`;
   }

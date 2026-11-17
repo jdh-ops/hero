@@ -237,3 +237,14 @@
 @media (orientation: portrait) and (max-width: 700px) {
   .branches { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* 옵션 굴리기 */
+.inv-detail li .affix { width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 8px; text-align: left; padding: 5px 8px !important; margin: 2px 0; font-size: 13px !important; }
+.inv-detail li .affix.on { outline: 2px solid var(--inv-accent); background: #2a303d !important; }
+.atag { flex: none; font-size: 11px; padding: 0 6px; border-radius: 999px; border: 1px solid currentColor; }
+.ar-common { color: var(--inv-normal); }
+.ar-uncommon { color: var(--inv-magic); }
+.ar-rare { color: var(--inv-rare); }
+.inv button.gold { background: #6d4c00; border-color: #ffb300; color: #ffe082; font-weight: 700; }
+.enh-table td { font-size: 11px; color: var(--inv-dim); }
+.enh-table tr.now td { color: var(--inv-text); font-weight: 700; }

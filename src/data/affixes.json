@@ -14,22 +14,37 @@
   },
   "tiers": [
    {
+    "tier": 5,
     "level": 1,
     "lo": 4,
     "hi": 8
    },
    {
+    "tier": 4,
     "level": 8,
     "lo": 9,
     "hi": 15
    },
    {
+    "tier": 3,
     "level": 16,
     "lo": 16,
     "hi": 24
+   },
+   {
+    "tier": 2,
+    "level": 26,
+    "lo": 25,
+    "hi": 32
+   },
+   {
+    "tier": 1,
+    "level": 38,
+    "lo": 34,
+    "hi": 42
    }
   ],
-  "weight": 10
+  "rarity": "uncommon"
  },
  "dex": {
   "id": "dex",
@@ -46,22 +61,37 @@
   },
   "tiers": [
    {
+    "tier": 5,
     "level": 1,
     "lo": 4,
     "hi": 8
    },
    {
+    "tier": 4,
     "level": 8,
     "lo": 9,
     "hi": 15
    },
    {
+    "tier": 3,
     "level": 16,
     "lo": 16,
     "hi": 24
+   },
+   {
+    "tier": 2,
+    "level": 26,
+    "lo": 25,
+    "hi": 32
+   },
+   {
+    "tier": 1,
+    "level": 38,
+    "lo": 34,
+    "hi": 42
    }
   ],
-  "weight": 10
+  "rarity": "uncommon"
  },
  "int": {
   "id": "int",
@@ -78,22 +108,37 @@
   },
   "tiers": [
    {
+    "tier": 5,
     "level": 1,
     "lo": 4,
     "hi": 8
    },
    {
+    "tier": 4,
     "level": 8,
     "lo": 9,
     "hi": 15
    },
    {
+    "tier": 3,
     "level": 16,
     "lo": 16,
     "hi": 24
+   },
+   {
+    "tier": 2,
+    "level": 26,
+    "lo": 25,
+    "hi": 32
+   },
+   {
+    "tier": 1,
+    "level": 38,
+    "lo": 34,
+    "hi": 42
    }
   ],
-  "weight": 10
+  "rarity": "uncommon"
  },
  "maxLife": {
   "id": "maxLife",
@@ -109,22 +154,37 @@
   },
   "tiers": [
    {
+    "tier": 5,
     "level": 1,
     "lo": 10,
     "hi": 20
    },
    {
+    "tier": 4,
     "level": 8,
     "lo": 21,
     "hi": 35
    },
    {
+    "tier": 3,
     "level": 16,
     "lo": 36,
     "hi": 55
+   },
+   {
+    "tier": 2,
+    "level": 26,
+    "lo": 58,
+    "hi": 74
+   },
+   {
+    "tier": 1,
+    "level": 38,
+    "lo": 77,
+    "hi": 96
    }
   ],
-  "weight": 14
+  "rarity": "common"
  },
  "maxMana": {
   "id": "maxMana",
@@ -138,22 +198,37 @@
   },
   "tiers": [
    {
+    "tier": 5,
     "level": 1,
     "lo": 8,
     "hi": 15
    },
    {
+    "tier": 4,
     "level": 8,
     "lo": 16,
     "hi": 25
    },
    {
+    "tier": 3,
     "level": 16,
     "lo": 26,
     "hi": 38
+   },
+   {
+    "tier": 2,
+    "level": 26,
+    "lo": 40,
+    "hi": 51
+   },
+   {
+    "tier": 1,
+    "level": 38,
+    "lo": 53,
+    "hi": 66
    }
   ],
-  "weight": 10
+  "rarity": "common"
  },
  "maxShield": {
   "id": "maxShield",
@@ -168,22 +243,37 @@
   },
   "tiers": [
    {
+    "tier": 5,
     "level": 1,
     "lo": 8,
     "hi": 15
    },
    {
+    "tier": 4,
     "level": 8,
     "lo": 16,
     "hi": 28
    },
    {
+    "tier": 3,
     "level": 16,
     "lo": 29,
     "hi": 45
+   },
+   {
+    "tier": 2,
+    "level": 26,
+    "lo": 47,
+    "hi": 61
+   },
+   {
+    "tier": 1,
+    "level": 38,
+    "lo": 63,
+    "hi": 79
    }
   ],
-  "weight": 10
+  "rarity": "common"
  },
  "armor": {
   "id": "armor",
@@ -198,22 +288,37 @@
   },
   "tiers": [
    {
+    "tier": 5,
     "level": 1,
     "lo": 20,
     "hi": 40
    },
    {
+    "tier": 4,
     "level": 8,
     "lo": 41,
     "hi": 80
    },
    {
+    "tier": 3,
     "level": 16,
     "lo": 81,
     "hi": 140
+   },
+   {
+    "tier": 2,
+    "level": 26,
+    "lo": 147,
+    "hi": 189
+   },
+   {
+    "tier": 1,
+    "level": 38,
+    "lo": 196,
+    "hi": 245
    }
   ],
-  "weight": 10
+  "rarity": "common"
  },
  "evasion": {
   "id": "evasion",
@@ -228,22 +333,37 @@
   },
   "tiers": [
    {
+    "tier": 5,
     "level": 1,
     "lo": 20,
     "hi": 40
    },
    {
+    "tier": 4,
     "level": 8,
     "lo": 41,
     "hi": 80
    },
    {
+    "tier": 3,
     "level": 16,
     "lo": 81,
     "hi": 140
+   },
+   {
+    "tier": 2,
+    "level": 26,
+    "lo": 147,
+    "hi": 189
+   },
+   {
+    "tier": 1,
+    "level": 38,
+    "lo": 196,
+    "hi": 245
    }
   ],
-  "weight": 10
+  "rarity": "common"
  },
  "resFire": {
   "id": "resFire",
@@ -259,22 +379,37 @@
   },
   "tiers": [
    {
+    "tier": 5,
     "level": 1,
     "lo": 0.06,
     "hi": 0.12
    },
    {
+    "tier": 4,
     "level": 8,
     "lo": 0.13,
     "hi": 0.2
    },
    {
+    "tier": 3,
     "level": 16,
     "lo": 0.21,
     "hi": 0.28
+   },
+   {
+    "tier": 2,
+    "level": 26,
+    "lo": 0.294,
+    "hi": 0.378
+   },
+   {
+    "tier": 1,
+    "level": 38,
+    "lo": 0.392,
+    "hi": 0.49
    }
   ],
-  "weight": 10
+  "rarity": "common"
  },
  "resCold": {
   "id": "resCold",
@@ -290,22 +425,37 @@
   },
   "tiers": [
    {
+    "tier": 5,
     "level": 1,
     "lo": 0.06,
     "hi": 0.12
    },
    {
+    "tier": 4,
     "level": 8,
     "lo": 0.13,
     "hi": 0.2
    },
    {
+    "tier": 3,
     "level": 16,
     "lo": 0.21,
     "hi": 0.28
+   },
+   {
+    "tier": 2,
+    "level": 26,
+    "lo": 0.294,
+    "hi": 0.378
+   },
+   {
+    "tier": 1,
+    "level": 38,
+    "lo": 0.392,
+    "hi": 0.49
    }
   ],
-  "weight": 10
+  "rarity": "common"
  },
  "resLightning": {
   "id": "resLightning",
@@ -321,22 +471,37 @@
   },
   "tiers": [
    {
+    "tier": 5,
     "level": 1,
     "lo": 0.06,
     "hi": 0.12
    },
    {
+    "tier": 4,
     "level": 8,
     "lo": 0.13,
     "hi": 0.2
    },
    {
+    "tier": 3,
     "level": 16,
     "lo": 0.21,
     "hi": 0.28
+   },
+   {
+    "tier": 2,
+    "level": 26,
+    "lo": 0.294,
+    "hi": 0.378
+   },
+   {
+    "tier": 1,
+    "level": 38,
+    "lo": 0.392,
+    "hi": 0.49
    }
   ],
-  "weight": 10
+  "rarity": "common"
  },
  "lifeRegen": {
   "id": "lifeRegen",
@@ -350,22 +515,37 @@
   },
   "tiers": [
    {
+    "tier": 5,
     "level": 1,
     "lo": 1,
     "hi": 2
    },
    {
+    "tier": 4,
     "level": 8,
     "lo": 2,
     "hi": 4
    },
    {
+    "tier": 3,
     "level": 16,
     "lo": 4,
     "hi": 7
+   },
+   {
+    "tier": 2,
+    "level": 26,
+    "lo": 7,
+    "hi": 9
+   },
+   {
+    "tier": 1,
+    "level": 38,
+    "lo": 10,
+    "hi": 12
    }
   ],
-  "weight": 6
+  "rarity": "common"
  },
  "manaRegen": {
   "id": "manaRegen",
@@ -379,22 +559,37 @@
   },
   "tiers": [
    {
+    "tier": 5,
     "level": 1,
     "lo": 1,
     "hi": 2
    },
    {
+    "tier": 4,
     "level": 8,
     "lo": 2,
     "hi": 3
    },
    {
+    "tier": 3,
     "level": 16,
     "lo": 3,
     "hi": 5
+   },
+   {
+    "tier": 2,
+    "level": 26,
+    "lo": 5,
+    "hi": 7
+   },
+   {
+    "tier": 1,
+    "level": 38,
+    "lo": 7,
+    "hi": 9
    }
   ],
-  "weight": 6
+  "rarity": "common"
  },
  "moveSpeedInc": {
   "id": "moveSpeedInc",
@@ -407,22 +602,37 @@
   },
   "tiers": [
    {
+    "tier": 5,
     "level": 1,
     "lo": 0.08,
     "hi": 0.12
    },
    {
+    "tier": 4,
     "level": 8,
     "lo": 0.13,
     "hi": 0.18
    },
    {
+    "tier": 3,
     "level": 16,
     "lo": 0.19,
     "hi": 0.25
+   },
+   {
+    "tier": 2,
+    "level": 26,
+    "lo": 0.263,
+    "hi": 0.338
+   },
+   {
+    "tier": 1,
+    "level": 38,
+    "lo": 0.35,
+    "hi": 0.438
    }
   ],
-  "weight": 20
+  "rarity": "rare"
  },
  "addPhys": {
   "id": "addPhys",
@@ -436,22 +646,37 @@
   },
   "tiers": [
    {
+    "tier": 5,
     "level": 1,
     "lo": 2,
     "hi": 4
    },
    {
+    "tier": 4,
     "level": 8,
     "lo": 5,
     "hi": 8
    },
    {
+    "tier": 3,
     "level": 16,
     "lo": 9,
     "hi": 14
+   },
+   {
+    "tier": 2,
+    "level": 26,
+    "lo": 15,
+    "hi": 19
+   },
+   {
+    "tier": 1,
+    "level": 38,
+    "lo": 20,
+    "hi": 24
    }
   ],
-  "weight": 10
+  "rarity": "uncommon"
  },
  "addFire": {
   "id": "addFire",
@@ -465,22 +690,37 @@
   },
   "tiers": [
    {
+    "tier": 5,
     "level": 1,
     "lo": 2,
     "hi": 4
    },
    {
+    "tier": 4,
     "level": 8,
     "lo": 5,
     "hi": 8
    },
    {
+    "tier": 3,
     "level": 16,
     "lo": 9,
     "hi": 14
+   },
+   {
+    "tier": 2,
+    "level": 26,
+    "lo": 15,
+    "hi": 19
+   },
+   {
+    "tier": 1,
+    "level": 38,
+    "lo": 20,
+    "hi": 24
    }
   ],
-  "weight": 10
+  "rarity": "uncommon"
  },
  "addCold": {
   "id": "addCold",
@@ -494,22 +734,37 @@
   },
   "tiers": [
    {
+    "tier": 5,
     "level": 1,
     "lo": 2,
     "hi": 4
    },
    {
+    "tier": 4,
     "level": 8,
     "lo": 5,
     "hi": 8
    },
    {
+    "tier": 3,
     "level": 16,
     "lo": 9,
     "hi": 14
+   },
+   {
+    "tier": 2,
+    "level": 26,
+    "lo": 15,
+    "hi": 19
+   },
+   {
+    "tier": 1,
+    "level": 38,
+    "lo": 20,
+    "hi": 24
    }
   ],
-  "weight": 10
+  "rarity": "uncommon"
  },
  "addLight": {
   "id": "addLight",
@@ -523,22 +778,37 @@
   },
   "tiers": [
    {
+    "tier": 5,
     "level": 1,
     "lo": 2,
     "hi": 4
    },
    {
+    "tier": 4,
     "level": 8,
     "lo": 5,
     "hi": 8
    },
    {
+    "tier": 3,
     "level": 16,
     "lo": 9,
     "hi": 14
+   },
+   {
+    "tier": 2,
+    "level": 26,
+    "lo": 15,
+    "hi": 19
+   },
+   {
+    "tier": 1,
+    "level": 38,
+    "lo": 20,
+    "hi": 24
    }
   ],
-  "weight": 10
+  "rarity": "uncommon"
  },
  "incPhys": {
   "id": "incPhys",
@@ -551,22 +821,37 @@
   },
   "tiers": [
    {
+    "tier": 5,
     "level": 1,
     "lo": 0.15,
     "hi": 0.25
    },
    {
+    "tier": 4,
     "level": 8,
     "lo": 0.26,
     "hi": 0.4
    },
    {
+    "tier": 3,
     "level": 16,
     "lo": 0.41,
     "hi": 0.6
+   },
+   {
+    "tier": 2,
+    "level": 26,
+    "lo": 0.63,
+    "hi": 0.81
+   },
+   {
+    "tier": 1,
+    "level": 38,
+    "lo": 0.84,
+    "hi": 1.05
    }
   ],
-  "weight": 10
+  "rarity": "uncommon"
  },
  "incElem": {
   "id": "incElem",
@@ -580,22 +865,37 @@
   },
   "tiers": [
    {
+    "tier": 5,
     "level": 1,
     "lo": 0.1,
     "hi": 0.18
    },
    {
+    "tier": 4,
     "level": 8,
     "lo": 0.19,
     "hi": 0.3
    },
    {
+    "tier": 3,
     "level": 16,
     "lo": 0.31,
     "hi": 0.45
+   },
+   {
+    "tier": 2,
+    "level": 26,
+    "lo": 0.473,
+    "hi": 0.608
+   },
+   {
+    "tier": 1,
+    "level": 38,
+    "lo": 0.63,
+    "hi": 0.787
    }
   ],
-  "weight": 6
+  "rarity": "rare"
  },
  "incAttack": {
   "id": "incAttack",
@@ -609,22 +909,37 @@
   },
   "tiers": [
    {
+    "tier": 5,
     "level": 1,
     "lo": 0.08,
     "hi": 0.14
    },
    {
+    "tier": 4,
     "level": 8,
     "lo": 0.15,
     "hi": 0.24
    },
    {
+    "tier": 3,
     "level": 16,
     "lo": 0.25,
     "hi": 0.35
+   },
+   {
+    "tier": 2,
+    "level": 26,
+    "lo": 0.367,
+    "hi": 0.472
+   },
+   {
+    "tier": 1,
+    "level": 38,
+    "lo": 0.49,
+    "hi": 0.612
    }
   ],
-  "weight": 10
+  "rarity": "uncommon"
  },
  "incArea": {
   "id": "incArea",
@@ -638,22 +953,37 @@
   },
   "tiers": [
    {
+    "tier": 5,
     "level": 1,
     "lo": 0.08,
     "hi": 0.14
    },
    {
+    "tier": 4,
     "level": 8,
     "lo": 0.15,
     "hi": 0.24
    },
    {
+    "tier": 3,
     "level": 16,
     "lo": 0.25,
     "hi": 0.35
+   },
+   {
+    "tier": 2,
+    "level": 26,
+    "lo": 0.367,
+    "hi": 0.472
+   },
+   {
+    "tier": 1,
+    "level": 38,
+    "lo": 0.49,
+    "hi": 0.612
    }
   ],
-  "weight": 6
+  "rarity": "uncommon"
  },
  "critChance": {
   "id": "critChance",
@@ -667,22 +997,37 @@
   },
   "tiers": [
    {
+    "tier": 5,
     "level": 1,
     "lo": 0.01,
     "hi": 0.02
    },
    {
+    "tier": 4,
     "level": 8,
     "lo": 0.02,
     "hi": 0.035
    },
    {
+    "tier": 3,
     "level": 16,
     "lo": 0.035,
     "hi": 0.05
+   },
+   {
+    "tier": 2,
+    "level": 26,
+    "lo": 0.053,
+    "hi": 0.068
+   },
+   {
+    "tier": 1,
+    "level": 38,
+    "lo": 0.07,
+    "hi": 0.088
    }
   ],
-  "weight": 10
+  "rarity": "uncommon"
  },
  "critMulti": {
   "id": "critMulti",
@@ -696,22 +1041,37 @@
   },
   "tiers": [
    {
+    "tier": 5,
     "level": 1,
     "lo": 0.1,
     "hi": 0.18
    },
    {
+    "tier": 4,
     "level": 8,
     "lo": 0.19,
     "hi": 0.28
    },
    {
+    "tier": 3,
     "level": 16,
     "lo": 0.29,
     "hi": 0.4
+   },
+   {
+    "tier": 2,
+    "level": 26,
+    "lo": 0.42,
+    "hi": 0.54
+   },
+   {
+    "tier": 1,
+    "level": 38,
+    "lo": 0.56,
+    "hi": 0.7
    }
   ],
-  "weight": 10
+  "rarity": "rare"
  },
  "actionSpeed": {
   "id": "actionSpeed",
@@ -726,21 +1086,36 @@
   },
   "tiers": [
    {
+    "tier": 5,
     "level": 1,
     "lo": 0.04,
     "hi": 0.07
    },
    {
+    "tier": 4,
     "level": 8,
     "lo": 0.08,
     "hi": 0.11
    },
    {
+    "tier": 3,
     "level": 16,
     "lo": 0.12,
     "hi": 0.16
+   },
+   {
+    "tier": 2,
+    "level": 26,
+    "lo": 0.168,
+    "hi": 0.216
+   },
+   {
+    "tier": 1,
+    "level": 38,
+    "lo": 0.224,
+    "hi": 0.28
    }
   ],
-  "weight": 10
+  "rarity": "rare"
  }
 }

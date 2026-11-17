@@ -64,8 +64,8 @@ export interface BossDropTable {
   itemRarity: Record<'normal' | 'magic' | 'rare', number>;
   gemChance: number;
   gemRarity: Record<GemRarity, number>;
-  /** 보스 재화: stone 은 [최소, 최대] 개수, 나머지는 기대 개수(정수 부분 확정 + 소수 부분 확률) */
-  currency: { stone: [number, number]; essence: number; rift_map: number; crystal: number; gold: number };
+  /** 보스 재화: [최소, 최대] 개수 또는 기대 개수(정수 부분 확정 + 소수 부분 확률) */
+  currency: Record<string, number | [number, number]>;
 }
 
 
@@ -112,16 +112,15 @@ export interface CurrencyDef {
 }
 
 export interface EconomyData {
-  /** 강화 단계별 기본 성공 확률 (+0→+1 이 [0]) */
-  chances: number[];
-  /** 실패할 때마다 다음 성공 확률에 더함 */
-  failBonus: number;
-  crystalBonus: number;
-  item: { perLevel: number; stone: number[]; gold: number[] };
-  skill: { perLevel: number; essence: number[]; gold: number[] };
+  /** 스킬 강화: 단계별 성공 확률과 재료 (+0→+1 이 [0]) */
+  skill: { perLevel: number; chances: number[]; costs: Record<string, number>[] };
+  /** 장비 옵션 굴리기: 등급별 강화석, 금화 = 기본 + 아이템 레벨 × n, 금괴 굴림 비용 */
+  reroll: { stone: Record<'normal' | 'magic' | 'rare', string>; goldBase: number; goldPerIlvl: number; goldBar: number };
+  /** 분해: 성공 확률, 등급별 보상 */
   salvage: {
-    item: Record<'normal' | 'magic' | 'rare', { gold: number; stone: number; essenceChance?: number }>;
-    gem: Record<GemRarity, { essence: number }>;
+    chance: number;
+    item: Record<'normal' | 'magic' | 'rare', Record<string, number>>;
+    gem: Record<GemRarity, Record<string, number>>;
   };
   /** gold: [기본, 레벨당] */
   shop: { id: string; name: string; description: string; gold: [number, number] }[];

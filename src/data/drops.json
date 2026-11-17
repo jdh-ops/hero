@@ -116,14 +116,15 @@
     "rare": 0
    },
    "currency": {
-    "stone": [
+    "gold": 60,
+    "stone_common": [
      2,
-     4
+     3
     ],
-    "essence": 0,
-    "rift_map": 0,
-    "crystal": 0,
-    "gold": 60
+    "essence_common": [
+     1,
+     2
+    ]
    }
   },
   "hard": {
@@ -140,14 +141,20 @@
     "rare": 0
    },
    "currency": {
-    "stone": [
-     3,
-     5
+    "gold": 150,
+    "stone_common": [
+     2,
+     3
     ],
-    "essence": 0.6,
-    "rift_map": 0,
-    "crystal": 0,
-    "gold": 150
+    "stone_uncommon": [
+     1,
+     2
+    ],
+    "essence_common": [
+     1,
+     2
+    ],
+    "essence_uncommon": 0.6
    }
   },
   "hell": {
@@ -164,14 +171,23 @@
     "rare": 25
    },
    "currency": {
-    "stone": [
-     4,
-     6
+    "gold": 300,
+    "stone_uncommon": [
+     2,
+     3
     ],
-    "essence": 1,
+    "stone_rare": [
+     1,
+     2
+    ],
+    "essence_uncommon": [
+     1,
+     2
+    ],
+    "essence_rare": 0.6,
     "rift_map": 0.5,
-    "crystal": 0.2,
-    "gold": 300
+    "gold_bar": 0.3,
+    "essence_special": 0.05
    }
   },
   "mapping": {
@@ -193,27 +209,40 @@
     "extraItemEvery": 3
    },
    "currency": {
-    "stone": [
-     5,
-     8
+    "gold": 500,
+    "stone_uncommon": [
+     2,
+     4
     ],
-    "essence": 1,
+    "stone_rare": [
+     2,
+     3
+    ],
+    "essence_rare": [
+     1,
+     2
+    ],
     "rift_map": 1.5,
-    "crystal": 0.35,
-    "gold": 500
+    "gold_bar": 0.5,
+    "essence_special": 0.1
    }
   }
  },
  "currencyPool": {
   "common": {
-   "stone": 1
+   "stone_common": 6,
+   "essence_common": 4
   },
   "uncommon": {
-   "essence": 7,
-   "rift_map": 3
+   "stone_uncommon": 5,
+   "essence_uncommon": 3,
+   "rift_map": 2
   },
   "rare": {
-   "crystal": 1
+   "stone_rare": 5,
+   "essence_rare": 3,
+   "gold_bar": 2,
+   "essence_special": 0.5
   }
  }
 }

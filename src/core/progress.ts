@@ -109,7 +109,7 @@ export function bossDropTableFor(run: RunConfig): BossDropTable {
     itemRarity: { ...m.itemRarity, rare: m.itemRarity.rare + m.perTier.rare * t },
     gemChance: m.gemChance,
     gemRarity: { ...m.gemRarity, rare: m.gemRarity.rare + m.perTier.gemRare * t },
-    currency: { ...m.currency, gold: m.currency.gold + 60 * t },
+    currency: { ...m.currency, gold: (m.currency.gold as number) + 60 * t },
   };
 }
 

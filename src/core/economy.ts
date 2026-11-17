@@ -1,15 +1,13 @@
-// 경제: 재화 지갑, 재화 드랍, 확률형 강화(장비·스킬), 분해, 상점.
-import { CURRENCIES, DROPS, ECONOMY, type BossDropTable, type DropTable, type GemRarity } from '../data';
+// 경제: 재화 지갑, 재화 드랍, 장비 옵션 굴리기, 확률형 스킬 강화, 분해, 상점.
+import { CURRENCIES, DROPS, ECONOMY, SUPPORTS, type BossDropTable, type DropTable, type GemRarity } from '../data';
 import type { Rng } from './damage';
 import { gemKey, parseGem } from './gems';
-import { generateItem, makeItem, type Item } from './items';
-export { enhanceMods } from './items';
+import { generateItem, rerollAffix, type Item } from './items';
 import { pickWeighted } from './progress';
-import { SUPPORTS } from '../data';
 
 export type Wallet = Record<string, number>;
 
-export const MAX_ENHANCE = ECONOMY.chances.length; // +10
+export const MAX_SKILL_ENHANCE = ECONOMY.skill.chances.length; // +10
 
 export function has(w: Wallet, cost: Wallet): boolean {
   return Object.entries(cost).every(([k, n]) => (w[k] ?? 0) >= n);
@@ -31,7 +29,7 @@ export function formatCost(cost: Wallet): string {
 
 // ---------- 드랍 ----------
 
-/** 처치당 금화 (자동 획득) */
+/** 처치당 금화 (자동 획득). 금화는 사냥으로만 얻는다 */
 export function rollGold(table: DropTable, monsterLevel: number, rng: Rng = Math.random): number {
   const [lo, hi] = table.goldPerLevel;
   return Math.round(monsterLevel * (lo + (hi - lo) * rng()));
@@ -44,77 +42,74 @@ export function rollCurrency(table: DropTable, rng: Rng = Math.random): string |
   return pickWeighted(DROPS.currencyPool[rarity], rng);
 }
 
-/** 기대 개수 → 실제 개수 (정수 부분 확정, 소수 부분은 확률) */
-const expected = (v: number, rng: Rng) => Math.floor(v) + (rng() < v % 1 ? 1 : 0);
-
-/** 보스가 떨어뜨리는 재화 묶음 */
+/** 보스 재화 묶음. 값이 [최소, 최대] 면 그 사이, 숫자면 기대 개수(정수 확정 + 소수 확률) */
 export function rollBossCurrency(table: BossDropTable, rng: Rng = Math.random): Wallet {
-  const c = table.currency;
-  return {
-    gold: c.gold,
-    stone: c.stone[0] + Math.floor(rng() * (c.stone[1] - c.stone[0] + 1)),
-    essence: expected(c.essence, rng),
-    rift_map: expected(c.rift_map, rng),
-    crystal: expected(c.crystal, rng),
-  };
+  const out: Wallet = {};
+  for (const [id, v] of Object.entries(table.currency)) {
+    out[id] = Array.isArray(v) ? v[0] + Math.floor(rng() * (v[1] - v[0] + 1)) : Math.floor(v) + (rng() < v % 1 ? 1 : 0);
+  }
+  return out;
 }
 
-// ---------- 강화 ----------
+// ---------- 장비 옵션 굴리기 ----------
 
-export interface EnhanceTarget {
-  level: number;
-  /** 연속 실패 수 (성공하면 0) */
-  fails: number;
+/** 장비 등급에 맞는 강화석 + 금화. boosted(금괴) 는 희귀 장비만: 희귀 강화석 + 금괴 */
+export function rerollCost(item: Item, boosted: boolean): Wallet {
+  const r = ECONOMY.reroll;
+  const stone = r.stone[item.rarity];
+  if (boosted) return { [stone]: 1, gold_bar: r.goldBar };
+  return { [stone]: 1, gold: r.goldBase + r.goldPerIlvl * item.ilvl };
 }
 
-export function enhanceChance(t: EnhanceTarget, useCrystal: boolean): number {
-  if (t.level >= MAX_ENHANCE) return 0;
-  const c = ECONOMY.chances[t.level] + t.fails * ECONOMY.failBonus + (useCrystal ? ECONOMY.crystalBonus : 0);
-  return Math.min(1, c);
+export const canBoost = (item: Item) => item.rarity === 'rare';
+
+export function tryReroll(w: Wallet, item: Item, index: number, boosted: boolean, rng: Rng = Math.random): 'ok' | 'no-money' | 'invalid' {
+  if (boosted && !canBoost(item)) return 'invalid';
+  if (index < 0 || index >= item.affixes.length) return 'invalid';
+  if (!spend(w, rerollCost(item, boosted))) return 'no-money';
+  rerollAffix(item, index, rng, boosted);
+  return 'ok';
 }
 
-export function itemEnhanceCost(level: number): Wallet {
-  return { stone: ECONOMY.item.stone[level], gold: ECONOMY.item.gold[level] };
+// ---------- 스킬 강화 (확률형) ----------
+
+export function skillEnhanceChance(level: number): number {
+  return ECONOMY.skill.chances[level] ?? 0;
 }
 
 export function skillEnhanceCost(level: number): Wallet {
-  return { essence: ECONOMY.skill.essence[level], gold: ECONOMY.skill.gold[level] };
+  return { ...(ECONOMY.skill.costs[level] ?? {}) };
 }
 
 export type EnhanceResult = 'success' | 'fail' | 'no-money' | 'max';
 
-/** 확률형 강화. 실패하면 재료만 잃고 단계 유지, 다음 확률 상승 */
-export function tryEnhance(w: Wallet, t: EnhanceTarget, cost: Wallet, useCrystal: boolean, rng: Rng = Math.random): EnhanceResult {
-  if (t.level >= MAX_ENHANCE) return 'max';
-  const total = useCrystal ? { ...cost, crystal: (cost.crystal ?? 0) + 1 } : cost;
-  const chance = enhanceChance(t, useCrystal);
-  if (!spend(w, total)) return 'no-money';
-  if (rng() < chance) {
+/** 실패하면 재료만 잃고 단계 유지 */
+export function tryEnhanceSkill(w: Wallet, t: { level: number }, rng: Rng = Math.random): EnhanceResult {
+  if (t.level >= MAX_SKILL_ENHANCE) return 'max';
+  if (!spend(w, skillEnhanceCost(t.level))) return 'no-money';
+  if (rng() < skillEnhanceChance(t.level)) {
     t.level++;
-    t.fails = 0;
     return 'success';
   }
-  t.fails++;
   return 'fail';
 }
 
-/** 스킬 강화: 스킬 배율 × (1 + 6% × 단계) */
-export function skillEnhanceMult(level: number): number {
-  return 1 + ECONOMY.skill.perLevel * level;
+// ---------- 분해 (50% 성공해야 재화) ----------
+
+/** 장비 → 같은 등급 강화석 */
+export function salvageItemReward(item: Item): Wallet {
+  return { ...ECONOMY.salvage.item[item.rarity] };
 }
 
-// ---------- 분해 ----------
-
-export function salvageItem(item: Item, rng: Rng = Math.random): Wallet {
-  const s = ECONOMY.salvage.item[item.rarity];
-  const out: Wallet = { gold: s.gold + Math.round(item.ilvl * 0.5), stone: s.stone };
-  if (s.essenceChance && rng() < s.essenceChance) out.essence = 1;
-  return out;
-}
-
-export function salvageGem(key: string): Wallet {
+/** 젬 → 같은 희귀도 스킬 정수 */
+export function salvageGemReward(key: string): Wallet {
   const g = parseGem(key);
-  return { essence: g ? ECONOMY.salvage.gem[g.rarity].essence : 0 };
+  return g ? { ...ECONOMY.salvage.gem[g.rarity] } : {};
+}
+
+/** 성공하면 보상, 실패하면 빈 지갑 (분해 대상은 어느 쪽이든 사라짐) */
+export function rollSalvage(reward: Wallet, rng: Rng = Math.random): Wallet {
+  return rng() < ECONOMY.salvage.chance ? reward : {};
 }
 
 // ---------- 상점 ----------
@@ -135,8 +130,19 @@ export function shopRoll(id: string, level: number, rng: Rng = Math.random): Sho
       const ids = Object.keys(SUPPORTS);
       return { gem: gemKey(ids[Math.floor(rng() * ids.length)], 'common') };
     }
-    default: return { currency: { stone: 1 } };
+    default: return { currency: { stone_common: 1 } };
   }
 }
 
-export { makeItem };
+/** 예전 세이브 재화 → 새 재화 */
+export function migrateWallet(w: Wallet): Wallet {
+  const out: Wallet = { ...w };
+  const move = (from: string, to: string) => {
+    if (out[from]) { out[to] = (out[to] ?? 0) + out[from]; }
+    delete out[from];
+  };
+  move('stone', 'stone_common');
+  move('essence', 'essence_common');
+  move('crystal', 'gold_bar');
+  return out;
+}

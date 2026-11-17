@@ -7,8 +7,8 @@ describe('장비', () => {
     for (let i = 0; i < 300; i++) {
       const it_ = generateItem(1 + (i % 20));
       const n = it_.affixes.length;
-      if (it_.rarity === 'normal') expect(n).toBe(0);
-      if (it_.rarity === 'magic') expect(n).toBeGreaterThanOrEqual(1);
+      if (it_.rarity === 'normal') expect(n).toBe(1);
+      if (it_.rarity === 'magic') expect(n).toBe(2);
       if (it_.rarity === 'rare') expect(n).toBeGreaterThanOrEqual(3);
       expect(new Set(it_.affixes.map((a) => a.id)).size).toBe(n);
       for (const a of it_.affixes) expect(AFFIXES[a.id].slots).toContain(it_.slot);
@@ -17,9 +17,14 @@ describe('장비', () => {
     }
   });
 
-  it('높은 아이템 레벨은 높은 단계 옵션', () => {
-    const tiers = Array.from({ length: 50 }, () => makeItem('ring_copper', 'rare', 20)).flatMap((i) => i.affixes.map((a) => a.tier));
-    expect(Math.min(...tiers)).toBe(3);
+  it('옵션 최대 티어는 아이템 레벨에 따름 (T1 = 최상)', () => {
+    const tiers = (ilvl: number) => Array.from({ length: 200 }, () => makeItem('ring_copper', 'rare', ilvl)).flatMap((i) => i.affixes.map((a) => a.tier));
+    expect(Math.min(...tiers(1))).toBe(5);
+    expect(Math.min(...tiers(20))).toBe(3);
+    expect(Math.min(...tiers(40))).toBe(1);
+    // 최고 티어는 가장 드묾
+    const t40 = tiers(40);
+    expect(t40.filter((t) => t === 1).length).toBeLessThan(t40.filter((t) => t === 3).length);
   });
 
   it('착용하면 스탯에 반영되고 원래 장비는 가방으로', () => {
@@ -61,14 +66,16 @@ describe('보조 젬', () => {
   });
 
   it('희귀도가 높을수록 효과가 크다', () => {
+    // 시작 무기 옵션이 무작위라 옵션을 비운 빌드로 비교
+    const fresh = () => { const b = newBuild(); b.equipment.weapon!.affixes = []; return b; };
     const hit = (r: 'common' | 'uncommon' | 'rare') => {
-      const b = newBuild();
+      const b = fresh();
       pickUpGem(b, gemKey('sup_focus', r));
       socketGem(b, 'warrior_whirl', 0, gemKey('sup_focus', r));
       const a = activeSkills(b)[0];
       return averageHit(a.stats, a.def);
     };
-    const base = (() => { const a = activeSkills(newBuild())[0]; return averageHit(a.stats, a.def); })();
+    const base = (() => { const a = activeSkills(fresh())[0]; return averageHit(a.stats, a.def); })();
     expect(hit('common')).toBeCloseTo(base * 1.25);
     expect(hit('uncommon')).toBeCloseTo(base * 1.32);
     expect(hit('rare')).toBeCloseTo(base * 1.4);

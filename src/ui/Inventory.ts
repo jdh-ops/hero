@@ -4,10 +4,12 @@ import {
   BAG_SIZE, SUMMARY_LABELS, activeSkills, discard, equipFromBag, freeGems, socketGem, socketsOf, statsFor, summarize, unequip,
   type Build, type Summary,
 } from '../core/build';
-import { RARITY_NAMES, SLOTS, SLOT_NAMES, BASES, affixMod, describeMod, implicitMods, itemTitle, type Item } from '../core/items';
 import {
-  MAX_ENHANCE, enhanceChance, formatCost, gain, has, itemEnhanceCost, salvageGem, salvageItem, shopPrice, shopRoll,
-  skillEnhanceCost, spend, tryEnhance, type EnhanceResult, type Wallet,
+  AFFIXES, AFFIX_RARITY_NAMES, RARITY_NAMES, SLOTS, SLOT_NAMES, BASES, affixMod, describeMod, implicitMods, itemTitle, maxTierFor, type Item,
+} from '../core/items';
+import {
+  MAX_SKILL_ENHANCE, canBoost, formatCost, gain, has, rerollCost, rollSalvage, salvageGemReward, salvageItemReward, shopPrice, shopRoll,
+  skillEnhanceChance, skillEnhanceCost, spend, tryEnhanceSkill, tryReroll, type EnhanceResult, type Wallet,
 } from '../core/economy';
 import { branchPoints, canRankUp, rankUp, spentPoints, totalPoints } from '../core/talents';
 import { CURRENCIES, ECONOMY, TALENTS } from '../data';
@@ -48,8 +50,8 @@ export class InventoryUI {
   private tab: 'gear' | 'skills' | 'talents' | 'shop' = 'gear';
   /** 스킬 탭에서 강화하려고 고른 스킬 */
   private skillPick: string | null = null;
-  /** 강화할 때 축복의 결정을 같이 쓸지 */
-  private useCrystal = false;
+  /** 장비 상세에서 굴리려고 고른 옵션 번호 */
+  private affixPick: number | null = null;
   /** 마지막 행동 결과 안내 */
   private msg = '';
   /** 스킬 탭에서 고른 보조 젬 칸 */
@@ -133,46 +135,50 @@ export class InventoryUI {
       case 'tab': this.tab = el.dataset.tab as InventoryUI['tab']; break;
       case 'socket': this.socket = { skillId: el.dataset.skill!, index: Number(el.dataset.index) }; this.skillPick = null; break;
       case 'skill-pick': this.skillPick = el.dataset.skill!; this.socket = null; break;
-      case 'crystal': this.useCrystal = !this.useCrystal; break;
-      case 'enh-item': {
+      case 'affix': this.affixPick = Number(el.dataset.index); break;
+      case 'reroll': {
         const item = this.findSelected();
-        if (!item) break;
-        const t = { level: item.enhance ?? 0, fails: item.enhanceFails ?? 0 };
-        const r = tryEnhance(b.wallet, t, itemEnhanceCost(t.level), this.useCrystal);
-        item.enhance = t.level;
-        item.enhanceFails = t.fails;
-        this.msg = this.enhanceMsg(r, t.level);
-        this.onChange();
+        if (!item || this.affixPick === null) break;
+        const boosted = el.dataset.boost === '1';
+        const r = tryReroll(b.wallet, item, this.affixPick, boosted);
+        if (r === 'ok') {
+          const a = item.affixes[this.affixPick];
+          this.msg = `${boosted ? '금괴 굴림' : '굴림'} 결과: ${describeMod(a.mod)} (T${a.tier} · ${AFFIX_RARITY_NAMES[AFFIXES[a.id].rarity]})`;
+          this.onChange();
+        } else this.msg = r === 'no-money' ? '재료가 부족합니다.' : '굴릴 수 없습니다.';
         break;
       }
       case 'enh-skill': {
         if (!this.skillPick) break;
-        const t = (b.skillEnhance[this.skillPick] ??= { level: 0, fails: 0 });
-        const r = tryEnhance(b.wallet, t, skillEnhanceCost(t.level), this.useCrystal);
-        this.msg = this.enhanceMsg(r, t.level);
+        const t = (b.skillEnhance[this.skillPick] ??= { level: 0 });
+        this.msg = this.enhanceMsg(tryEnhanceSkill(b.wallet, t), t.level);
         this.onChange();
         break;
       }
       case 'salvage': {
         const item = b.bag.find((i) => i.uid === uid);
         if (!item) break;
-        const got = salvageItem(item);
+        const got = rollSalvage(salvageItemReward(item));
         gain(b.wallet, got);
         discard(b, item.uid);
         this.selected = null;
-        this.msg = `분해: ${formatCost(got)}`;
+        this.msg = Object.keys(got).length ? `분해 성공: ${formatCost(got)}` : '분해 실패: 아무것도 얻지 못했습니다.';
         this.onChange();
         break;
       }
       case 'salvage-normal': {
         const total: Wallet = {};
-        for (const item of b.bag.filter((i) => i.rarity === 'normal' && !i.enhance)) {
-          gain(total, salvageItem(item));
+        let n = 0, ok = 0;
+        for (const item of b.bag.filter((i) => i.rarity === 'normal')) {
+          const got = rollSalvage(salvageItemReward(item));
+          if (Object.keys(got).length) ok++;
+          gain(total, got);
           discard(b, item.uid);
+          n++;
         }
         gain(b.wallet, total);
         this.selected = null;
-        this.msg = Object.keys(total).length ? `일반 장비 분해: ${formatCost(total)}` : '분해할 일반 장비가 없습니다.';
+        this.msg = n ? `일반 장비 ${n}개 분해 (성공 ${ok}): ${formatCost(total) || '없음'}` : '분해할 일반 장비가 없습니다.';
         this.onChange();
         break;
       }
@@ -180,9 +186,9 @@ export class InventoryUI {
         const key = el.dataset.gem!;
         if (freeGems(b, key) <= 0) break;
         b.gems[key]--;
-        const got = salvageGem(key);
+        const got = rollSalvage(salvageGemReward(key));
         gain(b.wallet, got);
-        this.msg = `젬 분해: ${formatCost(got)}`;
+        this.msg = Object.keys(got).length ? `젬 분해 성공: ${formatCost(got)}` : '젬 분해 실패: 아무것도 얻지 못했습니다.';
         this.onChange();
         break;
       }
@@ -224,7 +230,7 @@ export class InventoryUI {
           this.onChange();
         }
         break;
-      case 'select': this.selected = { where: where as 'bag' | 'equip', uid: uid! }; break;
+      case 'select': this.selected = { where: where as 'bag' | 'equip', uid: uid! }; this.affixPick = null; break;
       case 'equip': if (uid) { equipFromBag(b, uid); this.selected = { where: 'equip', uid }; this.onChange(); } break;
       case 'unequip': {
         const item = this.findSelected();
@@ -238,7 +244,7 @@ export class InventoryUI {
 
   private enhanceMsg(r: EnhanceResult, level: number): string {
     if (r === 'success') return `강화 성공! +${level}`;
-    if (r === 'fail') return `강화 실패 (+${level} 유지, 다음 성공 확률 +${ECONOMY.failBonus * 100}%)`;
+    if (r === 'fail') return `강화 실패 (+${level} 유지, 재료만 사라짐)`;
     if (r === 'no-money') return '재료가 부족합니다.';
     return '최대 단계입니다.';
   }
@@ -251,7 +257,8 @@ export class InventoryUI {
       `<button type="button" data-act="tab" data-tab="${id}" class="${this.tab === id ? 'on' : ''}">${label}</button>`;
     const left = totalPoints(b.level) - spentPoints(b.talents);
     const tabs = `<nav class="inv-tabs">${tabBtn('gear', '장비')}${tabBtn('skills', '스킬')}${tabBtn('talents', left > 0 ? `특성 <b class="pts">${left}</b>` : '특성')}${this.canShop() ? tabBtn('shop', '상점') : ''}</nav>`;
-    const wallet = Object.values(CURRENCIES).map((c) =>
+    // 금화와 가진 재화만 표시 (모바일에서 줄이 길어지지 않게)
+    const wallet = Object.values(CURRENCIES).filter((c) => c.id === 'gold' || (b.wallet[c.id] ?? 0) > 0).map((c) =>
       `<span class="cur" style="--c:#${Number(c.color).toString(16).padStart(6, '0')}" title="${esc(c.description)}">${c.name} <b>${b.wallet[c.id] ?? 0}</b></span>`).join('');
     const header = `<header>${tabs}<span class="hint">I · Tab · Esc 로 닫기 · 열려 있는 동안 일시정지</span>
         <button type="button" data-act="close">닫기</button>
@@ -330,27 +337,24 @@ export class InventoryUI {
       <section class="inv-detail">${this.skillPick ? this.skillEnhancePanel(b, this.skillPick) : this.gemPicker(b)}</section>`;
   }
 
-  /** 강화 공통 화면: 확률, 비용, 축복의 결정 */
-  private enhancePanel(b: Build, level: number, fails: number, cost: Wallet, act: string, effect: string): string {
-    if (level >= MAX_ENHANCE) return '<p class="dim">최대 단계(+10)입니다.</p>';
-    const chance = enhanceChance({ level, fails }, this.useCrystal);
-    const total = this.useCrystal ? { ...cost, crystal: 1 } : cost;
-    const ok = has(b.wallet, total);
-    return `<div class="enh-box">
-      <p><b>+${level} → +${level + 1}</b> · 성공 확률 <b>${Math.round(chance * 100)}%</b>${fails ? ` <span class="dim">(실패 보정 +${Math.round(fails * ECONOMY.failBonus * 100)}%)</span>` : ''}</p>
-      <p class="dim">${effect}</p>
-      <p>재료: ${formatCost(total)}</p>
-      <label class="chk"><input type="checkbox" data-act="crystal" ${this.useCrystal ? 'checked' : ''} ${(b.wallet.crystal ?? 0) > 0 || this.useCrystal ? '' : 'disabled'}> 축복의 결정 사용 (+${ECONOMY.crystalBonus * 100}%, 보유 ${b.wallet.crystal ?? 0})</label>
-      <div class="inv-actions"><button type="button" class="primary" data-act="${act}" ${ok ? '' : 'disabled'}>강화</button></div>
-      <p class="dim">실패하면 재료만 잃고 단계는 그대로입니다.</p></div>`;
-  }
-
   private skillEnhancePanel(b: Build, skillId: string): string {
-    const t = b.skillEnhance[skillId] ?? { level: 0, fails: 0 };
+    const level = b.skillEnhance[skillId]?.level ?? 0;
     const pct = Math.round(ECONOMY.skill.perLevel * 100);
+    let body: string;
+    if (level >= MAX_SKILL_ENHANCE) body = '<p class="dim">최대 단계(+10)입니다.</p>';
+    else {
+      const cost = skillEnhanceCost(level);
+      body = `<div class="enh-box">
+        <p><b>+${level} → +${level + 1}</b> · 성공 확률 <b>${Math.round(skillEnhanceChance(level) * 100)}%</b></p>
+        <p class="dim">단계마다 스킬 배율 +${pct}% (지금 +${level * pct}%)</p>
+        <p>재료: ${formatCost(cost)}</p>
+        <div class="inv-actions"><button type="button" class="primary" data-act="enh-skill" ${has(b.wallet, cost) ? '' : 'disabled'}>강화</button></div>
+        <p class="dim">실패하면 재료만 사라지고 단계는 그대로입니다.</p></div>`;
+    }
+    const table = ECONOMY.skill.chances.map((c, i) => `<tr${i === level ? ' class="now"' : ''}><td>+${i + 1}</td><td>${Math.round(c * 100)}%</td><td>${formatCost(ECONOMY.skill.costs[i])}</td></tr>`).join('');
     return `<p class="title">${esc(SKILLS[skillId].name)} 강화</p>
       <div class="inv-actions"><button type="button" data-act="skill-pick-cancel">닫기</button></div>
-      ${this.enhancePanel(b, t.level, t.fails, skillEnhanceCost(t.level), 'enh-skill', `단계마다 스킬 배율 +${pct}% (지금 +${t.level * pct}%)`)}`;
+      ${body}<table class="inv-compare enh-table">${table}</table>`;
   }
 
   private talentsTab(b: Build): string {
@@ -396,7 +400,7 @@ export class InventoryUI {
     if (!this.socket) {
       const list = owned.map((k) => {
         const free = freeGems(b, k);
-        const btn = free > 0 ? `<button type="button" class="mini" data-act="gem-salvage" data-gem="${k}">분해 (스킬 정수 ${salvageGem(k).essence})</button>` : '';
+        const btn = free > 0 ? `<button type="button" class="mini" data-act="gem-salvage" data-gem="${k}">분해 (50%: ${formatCost(salvageGemReward(k))})</button>` : '';
         return `<li>${label(k)} ×${b.gems[k]} ${btn}<br><span class="dim">${esc(describeGem(k))}</span></li>`;
       }).join('');
       return `<h3>가진 보조 젬 (같은 젬도 희귀도가 높을수록 수치가 큼)</h3>${list ? `<ul class="gem-list">${list}</ul>` : '<p class="inv-empty">없음. 몬스터가 가끔 떨어뜨립니다.</p>'}`;
@@ -423,10 +427,15 @@ export class InventoryUI {
 
   private detail(b: Build, item: Item, cur: Summary): string {
     const inBag = b.bag.some((i) => i.uid === item.uid);
-    const lines = [
-      ...implicitMods(item).map((m) => `<li class="implicit">${describeMod(m)}</li>`),
-      ...item.affixes.map((a, i) => `<li>${describeMod(affixMod(item, i))}<span class="tier">${a.tier}단계</span></li>`),
-    ].join('');
+    const affixLines = item.affixes.map((a, i) => {
+      const def = AFFIXES[a.id];
+      const max = maxTierFor(def, item.ilvl);
+      const on = this.affixPick === i ? ' on' : '';
+      return `<li><button type="button" class="affix${on}" data-act="affix" data-index="${i}">
+        <span>${describeMod(affixMod(item, i))}</span>
+        <span class="atag ar-${def.rarity}">T${a.tier}${a.tier === max ? '·최대' : ''} · ${AFFIX_RARITY_NAMES[def.rarity]}</span></button></li>`;
+    }).join('');
+    const lines = implicitMods(item).map((m) => `<li class="implicit">${describeMod(m)}</li>`).join('') + affixLines;
 
     let compare = '';
     if (inBag) {
@@ -444,15 +453,27 @@ export class InventoryUI {
 
     const actions = inBag
       ? `<button type="button" class="primary" data-act="equip" data-uid="${item.uid}">착용</button>
-         <button type="button" data-act="salvage" data-uid="${item.uid}">분해 (${formatCost(salvageItem({ ...item, rarity: item.rarity }, () => 1))})</button>`
+         <button type="button" data-act="salvage" data-uid="${item.uid}">분해 (50%: ${formatCost(salvageItemReward(item))})</button>`
       : `<button type="button" data-act="unequip" ${b.bag.length >= BAG_SIZE ? 'disabled' : ''}>해제</button>`;
 
-    const lv = item.enhance ?? 0;
-    const enh = this.enhancePanel(b, lv, item.enhanceFails ?? 0, itemEnhanceCost(lv), 'enh-item',
-      `단계마다 이 장비의 모든 옵션 +${Math.round(ECONOMY.item.perLevel * 100)}%`);
+    // 옵션 굴리기
+    let reroll: string;
+    if (this.affixPick === null || this.affixPick >= item.affixes.length) {
+      reroll = '<p class="dim">굴릴 옵션을 위 목록에서 누르세요. 고른 옵션 하나가 새 옵션(종류·티어·희귀도 무작위)으로 바뀝니다.</p>';
+    } else {
+      const cost = rerollCost(item, false);
+      const btns = [`<button type="button" class="primary" data-act="reroll" data-boost="0" ${has(b.wallet, cost) ? '' : 'disabled'}>굴리기 (${formatCost(cost)})</button>`];
+      if (canBoost(item)) {
+        const bc = rerollCost(item, true);
+        btns.push(`<button type="button" class="gold" data-act="reroll" data-boost="1" ${has(b.wallet, bc) ? '' : 'disabled'}>금괴 굴리기 (${formatCost(bc)})</button>`);
+      }
+      reroll = `<p class="dim">${this.affixPick + 1}번째 옵션을 다시 굴립니다.${canBoost(item) ? ' 금괴 굴리기는 희귀 옵션과 높은 티어가 훨씬 잘 나옵니다.' : ''}</p>
+        <div class="inv-actions">${btns.join('')}</div>`;
+    }
+
     return `<p class="title t-${item.rarity}">${esc(itemTitle(item))}</p>
       <p class="sub">${RARITY_NAMES[item.rarity]} ${SLOT_NAMES[item.slot]} · ${esc(BASES[item.baseId]?.name ?? '')} · 아이템 레벨 ${item.ilvl}</p>
       <div class="inv-actions">${actions}</div>
-      <ul>${lines}</ul>${compare}<h3>강화</h3>${enh}`;
+      <ul>${lines}</ul><h3>옵션 굴리기 (강화)</h3>${reroll}${compare}`;
   }
 }

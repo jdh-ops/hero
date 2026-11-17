@@ -6,7 +6,8 @@ import { SUPPORT_SOCKETS, canSupport, resolveSkill, type ActiveSkill } from './s
 import type { Mod } from './types';
 import { levelMods, newProgress, type Progress } from './progress';
 import { talentMods, type TalentRanks } from './talents';
-import type { Wallet } from './economy';
+import { migrateWallet, type Wallet } from './economy';
+import { migrateItem } from './items';
 import { CLASSES, SKILLS, type ClassDef } from '../data';
 import { gemKey, migrateGemKey, parseGem } from './gems';
 
@@ -29,8 +30,8 @@ export interface Build {
   wallet: Wallet;
   /** 특성 랭크 */
   talents: TalentRanks;
-  /** 스킬 강화 단계와 연속 실패 수 */
-  skillEnhance: Record<string, { level: number; fails: number }>;
+  /** 스킬 강화 단계 */
+  skillEnhance: Record<string, { level: number }>;
 }
 
 export interface SaveData extends Build {
@@ -215,8 +216,9 @@ export function loadBuild(): Build {
       if (data.version === SAVE_VERSION && CLASSES[data.classId]) {
         return {
           classId: data.classId,
-          equipment: data.equipment ?? {},
-          bag: data.bag ?? [],
+          // 옵션 5티어 체계 이전 장비는 변환
+          equipment: Object.fromEntries(Object.entries(data.equipment ?? {}).map(([s, it]) => [s, it && migrateItem(it)])),
+          bag: (data.bag ?? []).map((it) => migrateItem(it)),
           // 4단계 이전 세이브에는 없음
           // 젬 희귀도 도입 전 세이브는 모두 일반 등급으로
           gems: Object.fromEntries(Object.entries(data.gems ?? { sup_focus: 1 }).map(([k, n]) => [migrateGemKey(k), n])),
@@ -226,9 +228,9 @@ export function loadBuild(): Build {
           xp: data.xp ?? 0,
           progress: { ...newProgress(), ...data.progress, story: { ...newProgress().story, ...data.progress?.story } },
           // 6단계 이전 세이브에는 없음
-          wallet: data.wallet ?? { gold: 0 },
+          wallet: migrateWallet(data.wallet ?? { gold: 0 }),
           talents: data.talents ?? {},
-          skillEnhance: data.skillEnhance ?? {},
+          skillEnhance: Object.fromEntries(Object.entries(data.skillEnhance ?? {}).map(([k, v]) => [k, { level: v.level }])),
         };
       }
     }
