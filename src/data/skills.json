@@ -1,0 +1,28 @@
+{
+  "warrior_slash": {
+    "id": "warrior_slash",
+    "name": "베기",
+    "tags": ["attack", "melee", "physical", "str", "instant"],
+    "damageType": "physical",
+    "baseMin": 6, "baseMax": 10,
+    "effectiveness": 1.0,
+    "useTime": 0.7,
+    "cooldown": 0,
+    "manaCost": 0,
+    "range": 75,
+    "arc": 110
+  },
+  "warrior_whirl": {
+    "id": "warrior_whirl",
+    "name": "회전 베기",
+    "tags": ["attack", "melee", "area", "physical", "str", "instant"],
+    "damageType": "physical",
+    "baseMin": 10, "baseMax": 16,
+    "effectiveness": 1.4,
+    "useTime": 0.4,
+    "cooldown": 2.5,
+    "manaCost": 12,
+    "range": 0,
+    "radius": 130
+  }
+}

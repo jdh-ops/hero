@@ -1,0 +1,22 @@
+{
+  "warrior": {
+    "id": "warrior",
+    "name": "전사",
+    "basicAttack": "warrior_slash",
+    "skills": ["warrior_whirl"],
+    "mods": [
+      { "kind": "flat", "stat": "str", "value": 20 },
+      { "kind": "flat", "stat": "dex", "value": 10 },
+      { "kind": "flat", "stat": "int", "value": 5 },
+      { "kind": "flat", "stat": "maxLife", "value": 100 },
+      { "kind": "flat", "stat": "lifeRegen", "value": 1 },
+      { "kind": "flat", "stat": "maxMana", "value": 40 },
+      { "kind": "flat", "stat": "manaRegen", "value": 4 },
+      { "kind": "flat", "stat": "armor", "value": 60 },
+      { "kind": "flat", "stat": "moveSpeed", "value": 200 }
+    ],
+    "startingGear": [
+      { "kind": "added", "type": "physical", "min": 3, "max": 6 }
+    ]
+  }
+}

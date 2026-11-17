@@ -1,0 +1,17 @@
+{
+  "blob": {
+    "id": "blob",
+    "name": "떠돌이 덩어리",
+    "life": 30,
+    "lifePerLevel": 0.25,
+    "damageMin": 4, "damageMax": 7,
+    "damagePerLevel": 0.15,
+    "damageType": "physical",
+    "attackInterval": 1.0,
+    "moveSpeed": 85,
+    "radius": 16,
+    "armor": 10,
+    "res": { "fire": 0, "cold": 0, "lightning": 0 },
+    "color": "0x8bc34a"
+  }
+}
