@@ -2,10 +2,10 @@
 import './mapselect.css';
 import type { Build } from '../core/build';
 import {
-  areaLevel, canStart, dropTableFor, mappingUnlocked, maxMappingTier, storyUnlocked, xpToNext,
+  areaLevel, canStart, dropTableFor, mappingUnlocked, maxMappingTier, newMappingRun, storyUnlocked, xpToNext,
   type RunConfig, type StoryDifficulty,
 } from '../core/progress';
-import { MAPS } from '../data';
+import { MAPS, MONSTERS } from '../data';
 
 const ELEMENT_KO = { physical: '물리', fire: '화염', cold: '냉기', lightning: '번개' } as const;
 
@@ -45,7 +45,7 @@ export class MapSelectUI {
       case 'inv': this.onOpenInventory(); return;
       case 'start': {
         const run: RunConfig = this.tab === 'mapping'
-          ? { mode: 'mapping', mapId: d.map!, tier: this.tier }
+          ? newMappingRun(d.map!, this.tier)
           : { mode: 'story', difficulty: this.tab, mapIndex: Number(d.index) };
         if (canStart(this.getBuild().progress, run)) this.onStart(run);
         return;
@@ -68,7 +68,7 @@ export class MapSelectUI {
       const max = maxMappingTier(p);
       body = `<div class="tier"><button type="button" data-act="tier" data-delta="-1" ${this.tier <= 1 ? 'disabled' : ''}>−</button>
         <b>${this.tier}티어</b><button type="button" data-act="tier" data-delta="1" ${this.tier >= max ? 'disabled' : ''}>+</button>
-        <span class="dim">도전 가능 최고 ${max}티어 · 맵을 깨면 다음 티어가 열립니다</span></div>`;
+        <span class="dim">도전 가능 최고 ${max}티어 · 맵을 깨면 다음 티어가 열립니다<br>보스는 지역마다 고정, 일반 몹 속성은 입장할 때 무작위</span></div>`;
       body += this.cards((i) => ({ mode: 'mapping', mapId: MAPS.maps[i].id, tier: this.tier }), () => true, () => false);
     } else {
       const diff = this.tab;
@@ -101,7 +101,9 @@ export class MapSelectUI {
         <div class="top"><span class="el">${ELEMENT_KO[m.element]}</span>${status}</div>
         <h3>${m.name}</h3>
         <p>${m.description}</p>
-        <dl><dt>지역 레벨</dt><dd>${areaLevel(run)}</dd><dt>희귀 장비</dt><dd>${rarePct.toFixed(0)}%</dd></dl>
+        <dl><dt>보스</dt><dd>${MONSTERS[m.boss].name}</dd>
+          ${run.mode === 'mapping' ? '<dt>일반 몹</dt><dd>무작위 속성</dd>' : ''}
+          <dt>지역 레벨</dt><dd>${areaLevel(run)}</dd><dt>희귀 장비</dt><dd>${rarePct.toFixed(0)}%</dd></dl>
         <button type="button" class="go" data-act="start" data-index="${i}" data-map="${m.id}" ${open ? '' : 'disabled'}>입장</button>
       </article>`;
     }).join('')}</div>`;

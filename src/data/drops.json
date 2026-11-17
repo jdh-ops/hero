@@ -59,5 +59,68 @@
    "rare": 2,
    "gemRare": 2.5
   }
+ },
+ "boss": {
+  "normal": {
+   "items": 3,
+   "itemRarity": {
+    "normal": 20,
+    "magic": 60,
+    "rare": 20
+   },
+   "gemChance": 0.5,
+   "gemRarity": {
+    "common": 100,
+    "uncommon": 0,
+    "rare": 0
+   }
+  },
+  "hard": {
+   "items": 3,
+   "itemRarity": {
+    "normal": 10,
+    "magic": 55,
+    "rare": 35
+   },
+   "gemChance": 0.6,
+   "gemRarity": {
+    "common": 50,
+    "uncommon": 50,
+    "rare": 0
+   }
+  },
+  "hell": {
+   "items": 4,
+   "itemRarity": {
+    "normal": 5,
+    "magic": 45,
+    "rare": 50
+   },
+   "gemChance": 0.75,
+   "gemRarity": {
+    "common": 30,
+    "uncommon": 45,
+    "rare": 25
+   }
+  },
+  "mapping": {
+   "items": 4,
+   "itemRarity": {
+    "normal": 0,
+    "magic": 40,
+    "rare": 60
+   },
+   "gemChance": 1.0,
+   "gemRarity": {
+    "common": 20,
+    "uncommon": 45,
+    "rare": 35
+   },
+   "perTier": {
+    "rare": 4,
+    "gemRare": 3,
+    "extraItemEvery": 3
+   }
+  }
  }
 }

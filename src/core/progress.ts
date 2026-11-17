@@ -1,5 +1,5 @@
 // 진행: 스토리(3난이도 × 4맵) → 맵핑(티어). 캐릭터 레벨·경험치. 드랍 테이블.
-import { DROPS, MAPS, SUPPORTS, type DropTable, type GemRarity, type MapDef } from '../data';
+import { DROPS, MAPS, SUPPORTS, type BossDropTable, type DropTable, type GemRarity, type MapDef } from '../data';
 import type { Rng } from './damage';
 import type { Mod } from './types';
 import { gemKey } from './gems';
@@ -9,7 +9,8 @@ export type StoryDifficulty = 'normal' | 'hard' | 'hell';
 /** 한 판의 설정 */
 export type RunConfig =
   | { mode: 'story'; difficulty: StoryDifficulty; mapIndex: number }
-  | { mode: 'mapping'; mapId: string; tier: number };
+  /** mobMap: 이번 판 일반 몹을 가져올 맵(속성). 입장할 때 무작위로 정함. 보스는 mapId 지역 고정 */
+  | { mode: 'mapping'; mapId: string; tier: number; mobMap?: string };
 
 export interface Progress {
   /** 난이도별로 클리어한 맵 수 (순서대로 해금) */
@@ -23,6 +24,23 @@ export const newProgress = (): Progress => ({ story: { normal: 0, hard: 0, hell:
 export function mapOf(run: RunConfig): MapDef {
   if (run.mode === 'story') return MAPS.maps[run.mapIndex];
   return MAPS.maps.find((m) => m.id === run.mapId) ?? MAPS.maps[0];
+}
+
+/** 이번 판 일반 몹 목록. 스토리는 맵 고정, 맵핑은 입장 때 정한 무작위 속성 */
+export function mobPool(run: RunConfig): MapDef['monsters'] {
+  if (run.mode === 'mapping' && run.mobMap) return (MAPS.maps.find((m) => m.id === run.mobMap) ?? mapOf(run)).monsters;
+  return mapOf(run).monsters;
+}
+
+export function mobElement(run: RunConfig): MapDef['element'] {
+  if (run.mode === 'mapping' && run.mobMap) return (MAPS.maps.find((m) => m.id === run.mobMap) ?? mapOf(run)).element;
+  return mapOf(run).element;
+}
+
+/** 맵핑 입장: 일반 몹 속성을 무작위로 */
+export function newMappingRun(mapId: string, tier: number, rng: Rng = Math.random): RunConfig {
+  const mob = MAPS.maps[Math.floor(rng() * MAPS.maps.length)];
+  return { mode: 'mapping', mapId, tier, mobMap: mob.id };
 }
 
 /** 지역 레벨 = 몬스터 레벨 = 아이템 레벨 */
@@ -78,6 +96,19 @@ export function dropTableFor(run: RunConfig): DropTable {
   };
 }
 
+/** 보스 전용 드랍 테이블 */
+export function bossDropTableFor(run: RunConfig): BossDropTable {
+  if (run.mode === 'story') return DROPS.boss[run.difficulty];
+  const m = DROPS.boss.mapping;
+  const t = run.tier - 1;
+  return {
+    items: m.items + Math.floor(t / m.perTier.extraItemEvery),
+    itemRarity: { ...m.itemRarity, rare: m.itemRarity.rare + m.perTier.rare * t },
+    gemChance: m.gemChance,
+    gemRarity: { ...m.gemRarity, rare: m.gemRarity.rare + m.perTier.gemRare * t },
+  };
+}
+
 function pickWeighted<K extends string>(weights: Record<K, number>, rng: Rng): K {
   const entries = Object.entries(weights) as [K, number][];
   let r = rng() * entries.reduce((s, [, w]) => s + w, 0);
@@ -88,12 +119,12 @@ function pickWeighted<K extends string>(weights: Record<K, number>, rng: Rng): K
   return entries[entries.length - 1][0];
 }
 
-export function rollItemRarity(table: DropTable, rng: Rng = Math.random) {
+export function rollItemRarity(table: Pick<DropTable, 'itemRarity'>, rng: Rng = Math.random) {
   return pickWeighted(table.itemRarity, rng);
 }
 
 /** 젬 종류는 고르게, 희귀도는 드랍 테이블 비율로. "id:희귀도" 를 돌려줌 */
-export function rollGem(table: DropTable, rng: Rng = Math.random): string {
+export function rollGem(table: Pick<DropTable, 'gemRarity'>, rng: Rng = Math.random): string {
   const list = Object.values(SUPPORTS);
   const def = list[Math.floor(rng() * list.length)];
   return gemKey(def.id, pickWeighted(table.gemRarity, rng) as GemRarity);

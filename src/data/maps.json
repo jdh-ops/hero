@@ -16,7 +16,8 @@
      "id": "crossbowman",
      "weight": 1
     }
-   ]
+   ],
+   "boss": "boss_general"
   },
   {
    "id": "canyon",
@@ -34,7 +35,8 @@
      "id": "flame_thrower",
      "weight": 1
     }
-   ]
+   ],
+   "boss": "boss_ember"
   },
   {
    "id": "cavern",
@@ -52,7 +54,8 @@
      "id": "frost_archer",
      "weight": 1
     }
-   ]
+   ],
+   "boss": "boss_frost"
   },
   {
    "id": "highland",
@@ -70,7 +73,8 @@
      "id": "storm_caller",
      "weight": 1
     }
-   ]
+   ],
+   "boss": "boss_storm"
   }
  ],
  "story": [

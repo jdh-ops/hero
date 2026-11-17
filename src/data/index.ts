@@ -19,8 +19,8 @@ export interface ClassDef {
 export interface MonsterDef {
   id: string;
   name: string;
-  /** melee: 쫓아와서 때림, ranged: 거리를 두고 투사체 */
-  kind: 'melee' | 'ranged';
+  /** melee: 쫓아와서 때림, ranged: 거리를 두고 투사체, boss: 쫓아오며 특수 패턴 */
+  kind: 'melee' | 'ranged' | 'boss';
   life: number;
   /** 레벨당 생명력 증가 비율 */
   lifePerLevel: number;
@@ -38,6 +38,9 @@ export interface MonsterDef {
   xp: number;
   range?: number;
   projectileSpeed?: number;
+  /** 보스 특수 패턴: slam 내려찍기(표시 후 범위), volley 부채꼴 투사체, nova 사방 투사체, charge 돌진 */
+  pattern?: 'slam' | 'volley' | 'nova' | 'charge';
+  patternInterval?: number;
 }
 
 export interface MapDef {
@@ -48,6 +51,16 @@ export interface MapDef {
   bg: string;
   line: string;
   monsters: { id: string; weight: number }[];
+  /** 이 지역의 보스 (맵핑에서도 고정) */
+  boss: string;
+}
+
+export interface BossDropTable {
+  /** 확정으로 떨어지는 장비 수 */
+  items: number;
+  itemRarity: Record<'normal' | 'magic' | 'rare', number>;
+  gemChance: number;
+  gemRarity: Record<GemRarity, number>;
 }
 
 
@@ -72,4 +85,8 @@ export const MONSTERS = monstersJson as unknown as Record<string, MonsterDef>;
 export const MAPS = mapsJson as unknown as MapsData;
 export const DROPS = dropsJson as unknown as Record<'normal' | 'hard' | 'hell', DropTable> & {
   mapping: DropTable & { perTier: { itemChance: number; rare: number; gemRare: number } };
+  /** 보스 전용 드랍 테이블 */
+  boss: Record<'normal' | 'hard' | 'hell', BossDropTable> & {
+    mapping: BossDropTable & { perTier: { rare: number; gemRare: number; extraItemEvery: number } };
+  };
 };

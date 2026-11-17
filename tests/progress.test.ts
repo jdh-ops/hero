@@ -58,3 +58,42 @@ describe('진행', () => {
     expect(s.level).toBe(2);
   });
 });
+
+import { bossDropTableFor, mobPool, newMappingRun } from '../src/core/progress';
+import { MAPS, MONSTERS } from '../src/data';
+
+describe('보스', () => {
+  it('맵마다 다른 보스', () => {
+    const bosses = MAPS.maps.map((m) => m.boss);
+    expect(new Set(bosses).size).toBe(4);
+    for (const b of bosses) expect(MONSTERS[b].kind).toBe('boss');
+  });
+
+  it('맵핑: 보스는 지역 고정, 일반 몹은 무작위 속성', () => {
+    const elements = new Set<string>();
+    for (let i = 0; i < 200; i++) {
+      const run = newMappingRun('fortress', 1);
+      expect(run.mode === 'mapping' && run.mapId).toBe('fortress');
+      elements.add(mobPool(run)[0].id);
+    }
+    expect(elements.size).toBe(4);
+    // 스토리는 맵 고정
+    expect(mobPool({ mode: 'story', difficulty: 'normal', mapIndex: 1 })[0].id).toBe('ember_sprite');
+  });
+
+  it('보스 드랍은 일반 몹보다 좋고, 젬 희귀도 제한은 난이도를 따른다', () => {
+    const story = { mode: 'story', difficulty: 'normal', mapIndex: 0 } as const;
+    const bt = bossDropTableFor(story);
+    const nt = dropTableFor(story);
+    expect(bt.items).toBeGreaterThanOrEqual(3);
+    expect(bt.gemChance).toBeGreaterThan(nt.gemChance);
+    expect(bt.itemRarity.rare / (bt.itemRarity.normal + bt.itemRarity.magic + bt.itemRarity.rare))
+      .toBeGreaterThan(nt.itemRarity.rare / (nt.itemRarity.normal + nt.itemRarity.magic + nt.itemRarity.rare));
+    expect(bt.gemRarity.uncommon + bt.gemRarity.rare).toBe(0);
+    expect(bossDropTableFor({ mode: 'story', difficulty: 'hard', mapIndex: 0 }).gemRarity.rare).toBe(0);
+    const t1 = bossDropTableFor({ mode: 'mapping', mapId: 'canyon', tier: 1 });
+    const t10 = bossDropTableFor({ mode: 'mapping', mapId: 'canyon', tier: 10 });
+    expect(t10.items).toBeGreaterThan(t1.items);
+    expect(t10.gemRarity.rare).toBeGreaterThan(t1.gemRarity.rare);
+  });
+});

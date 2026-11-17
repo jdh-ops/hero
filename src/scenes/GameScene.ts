@@ -11,7 +11,7 @@ import type { StatSheet as Sheet } from '../core/stats';
 import { generateItem, type Item, type Rarity } from '../core/items';
 import { MAPS, MONSTERS, SKILLS, SUPPORTS, type MapDef, type MonsterDef } from '../data';
 import {
-  addXp, areaLevel, dropTableFor, mapOf, monsterXp, recordClear, rollGem, rollItemRarity, runName, xpToNext,
+  addXp, areaLevel, bossDropTableFor, dropTableFor, mapOf, mobElement, mobPool, monsterXp, recordClear, rollGem, rollItemRarity, runName, xpToNext,
   type RunConfig,
 } from '../core/progress';
 import { GEM_RARITIES, GEM_RARITY_COLOR, gemKey, gemName, parseGem } from '../core/gems';
@@ -24,6 +24,7 @@ import { MapSelectUI } from '../ui/MapSelect';
 // 3단계: 드랍 → 줍기 → 착용 → 스탯 반영 (장비는 죽어도 유지, 로컬 저장)
 // 4단계: 스킬 4개(범위·부채꼴·투사체·장판) + 보조 젬
 // 5단계: 지도(스토리 3난이도 × 4맵 → 맵핑 티어), 맵별 몬스터, 드랍 테이블, 캐릭터 레벨
+//        몹 60마리 → 지역 보스 등장 → 보스 처치 = 클리어 (보스는 전용 드랍 테이블)
 
 const WORLD = 2400;
 const PLAYER_RADIUS = 16;
@@ -41,6 +42,12 @@ class Monster extends Phaser.Physics.Arcade.Image {
   life = 0;
   maxLife = 0;
   attackCd = 0;
+  /** 보스 특수 패턴 대기 시간 */
+  patternCd = 0;
+  /** 돌진 중 남은 시간과 방향 */
+  charging = 0;
+  chargeAngle = 0;
+  chargeHit = false;
 
   get defender(): Defender {
     return { level: this.level, armor: this.def.armor, evasion: 0, res: this.def.res };
@@ -63,7 +70,10 @@ export class GameScene extends Phaser.Scene {
   private cleared = false;
   private mapSelect?: MapSelectUI;
   private domButtons: HTMLElement[] = [];
-  private enemyShots: EnemyShot[] = [];  private stats!: StatSheet;
+  private enemyShots: EnemyShot[] = [];
+  private boss: Monster | null = null;
+  private bossSpawned = false;
+  private bossText!: Phaser.GameObjects.Text;  private stats!: StatSheet;
   private inventory!: InventoryUI;
   private drops: Drop[] = [];
   private basic!: SkillDef;
@@ -178,10 +188,16 @@ export class GameScene extends Phaser.Scene {
     return el;
   }
 
+  /** 디버그: 보스 바로 소환 */
+  debugBoss() {
+    this.kills = MAPS.killTarget;
+    if (!this.bossSpawned) this.spawnBoss();
+  }
+
   /** 디버그: 맵을 바로 클리어 */
   debugClear() {
-    this.kills = MAPS.killTarget;
-    this.checkClear();
+    this.debugBoss();
+    if (this.boss) this.killMonster(this.boss);
   }
 
   /** 디버그: 보조 젬을 하나씩 모두 줌 */
@@ -196,6 +212,8 @@ export class GameScene extends Phaser.Scene {
     this.map = this.run ? mapOf(this.run) : MAPS.maps[0];
     this.level = this.run ? areaLevel(this.run) : 1;
     this.cleared = false;
+    this.boss = null;
+    this.bossSpawned = false;
     this.enemyShots = [];
     this.domButtons = [];
     this.mapSelect = undefined;    const cls = classOf(this.build);
@@ -256,7 +274,13 @@ export class GameScene extends Phaser.Scene {
     for (const def of Object.values(MONSTERS)) {
       const r = def.radius;
       g.fillStyle(Number(def.color));
-      if (def.kind === 'ranged') {
+      if (def.kind === 'boss') {
+        // 보스: 큰 원 + 테두리 + 왕관 점
+        g.fillCircle(r + 2, r + 2, r);
+        g.lineStyle(4, 0x000000, 0.5).strokeCircle(r + 2, r + 2, r - 2);
+        g.fillStyle(0xffd54f).fillTriangle(r - 10, 10, r - 4, 2, r + 2, 10).fillTriangle(r + 2, 10, r + 8, 2, r + 14, 10);
+        g.fillStyle(Number(def.color));
+      } else if (def.kind === 'ranged') {
         // 원거리 몹은 마름모
         g.fillPoints([{ x: r + 2, y: 2 }, { x: r * 2 + 2, y: r + 2 }, { x: r + 2, y: r * 2 + 2 }, { x: 2, y: r + 2 }], true);
       } else {
@@ -352,7 +376,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private updateSpawns(dt: number) {
-    if (this.cleared) return;
+    if (this.cleared || this.bossSpawned) return;
     this.spawnTimer -= dt;
     if (this.spawnTimer > 0) return;
     this.spawnTimer = 1.0;
@@ -368,9 +392,10 @@ export class GameScene extends Phaser.Scene {
     const x = Phaser.Math.Clamp(this.player.x + Math.cos(angle) * dist, 20, WORLD - 20);
     const y = Phaser.Math.Clamp(this.player.y + Math.sin(angle) * dist, 20, WORLD - 20);
 
-    const pick = Phaser.Math.Between(1, this.map.monsters.reduce((a, e) => a + e.weight, 0));
+    const pool = this.run ? mobPool(this.run) : this.map.monsters;
+    const pick = Phaser.Math.Between(1, pool.reduce((a, e) => a + e.weight, 0));
     let acc = 0;
-    const entry = this.map.monsters.find((e) => (acc += e.weight) >= pick)!;
+    const entry = pool.find((e) => (acc += e.weight) >= pick)!;
     const def = MONSTERS[entry.id];
     const m = this.monsters.get(x, y, def.id) as Monster | null;
     if (!m) return; // 상한 도달
@@ -387,12 +412,123 @@ export class GameScene extends Phaser.Scene {
     this.tweens.add({ targets: m, alpha: 1, duration: 250 });
   }
 
+  /** 몹을 다 잡으면 지역 보스 등장. 풀 상한과 상관없이 따로 만든다 */
+  private spawnBoss() {
+    this.bossSpawned = true;
+    const def = MONSTERS[this.map.boss];
+    const a = Math.random() * Math.PI * 2;
+    const x = Phaser.Math.Clamp(this.player.x + Math.cos(a) * 320, 60, WORLD - 60);
+    const y = Phaser.Math.Clamp(this.player.y + Math.sin(a) * 320, 60, WORLD - 60);
+    const m = new Monster(this, x, y, def.id);
+    this.add.existing(m);
+    this.physics.add.existing(m);
+    this.monsters.add(m);
+    m.setDepth(6).setCircle(def.radius, 2, 2);
+    m.def = def;
+    m.level = this.monsterLevel();
+    m.maxLife = def.life * (1 + def.lifePerLevel * (m.level - 1));
+    m.life = m.maxLife;
+    m.attackCd = def.attackInterval;
+    m.patternCd = 2;
+    (m.body as Phaser.Physics.Arcade.Body).pushable = false;
+    this.boss = m;
+    this.floatText(this.player.x, this.player.y - 70, `보스 등장: ${def.name}`, '#ffd54f', true);
+    this.cameras.main.flash(250, 80, 20, 20);
+  }
+
+  // ---------- 보스 패턴 ----------
+
+  private updateBoss(m: Monster, dt: number) {
+    const d = Phaser.Math.Distance.Between(m.x, m.y, this.player.x, this.player.y);
+    if (m.charging < 0) {
+      // 돌진 준비: 멈춰서 기다림
+      m.charging = Math.min(0, m.charging + dt);
+      m.setVelocity(0, 0);
+      return;
+    }
+    if (m.charging > 0) {
+      m.charging -= dt;
+      const sp = m.def.moveSpeed * 5;
+      m.setVelocity(Math.cos(m.chargeAngle) * sp, Math.sin(m.chargeAngle) * sp);
+      if (!m.chargeHit && d < m.def.radius + PLAYER_RADIUS + 4) {
+        m.chargeHit = true;
+        this.playerTakesHit(this.scaledHit(this.monsterHit(m), 1.6));
+      }
+      return;
+    }
+    const reach = m.def.radius + PLAYER_RADIUS + 4;
+    if (d > reach - 2) this.physics.moveToObject(m, this.player, m.def.moveSpeed);
+    else m.setVelocity(0, 0);
+    m.attackCd -= dt;
+    if (d <= reach && m.attackCd <= 0) {
+      m.attackCd = m.def.attackInterval;
+      this.monsterHitsPlayer(m);
+    }
+    m.patternCd -= dt;
+    if (m.patternCd > 0) return;
+    m.patternCd = m.def.patternInterval ?? 3;
+    const toPlayer = Phaser.Math.Angle.Between(m.x, m.y, this.player.x, this.player.y);
+    switch (m.def.pattern) {
+      case 'slam': {
+        // 플레이어 위치에 표시 → 0.9초 뒤 범위 피해 (피할 수 있음)
+        const tx = this.player.x, ty = this.player.y, r = 110;
+        const mark = this.add.circle(tx, ty, r, 0xff3d00, 0.18).setStrokeStyle(3, 0xff3d00, 0.9).setDepth(2);
+        this.tweens.add({ targets: mark, alpha: 0.6, duration: 900 });
+        this.time.delayedCall(900, () => {
+          mark.destroy();
+          if (!m.active || this.dead) return;
+          const hitFx = this.add.circle(tx, ty, r, 0xffffff, 0.35).setDepth(14);
+          this.tweens.add({ targets: hitFx, alpha: 0, scale: 1.15, duration: 250, onComplete: () => hitFx.destroy() });
+          this.cameras.main.shake(120, 0.006);
+          if (Phaser.Math.Distance.Between(tx, ty, this.player.x, this.player.y) < r + PLAYER_RADIUS) {
+            this.playerTakesHit(this.scaledHit(this.monsterHit(m), 2));
+          }
+        });
+        break;
+      }
+      case 'volley':
+        for (let i = -2; i <= 2; i++) this.bossShot(m, toPlayer + Phaser.Math.DegToRad(12) * i);
+        break;
+      case 'nova':
+        for (let i = 0; i < 12; i++) this.bossShot(m, (Math.PI * 2 * i) / 12);
+        break;
+      case 'charge': {
+        // 0.6초 동안 돌진 방향 표시 → 돌진
+        m.setVelocity(0, 0);
+        const line = this.add.rectangle(m.x, m.y, 420, m.def.radius * 2, 0xfdd835, 0.18).setOrigin(0, 0.5).setRotation(toPlayer).setDepth(2);
+        m.patternCd += 0.6;
+        m.charging = -0.6; // 표시 동안은 멈춤
+        this.time.delayedCall(600, () => {
+          line.destroy();
+          if (!m.active) return;
+          m.chargeAngle = toPlayer;
+          m.charging = 0.5;
+          m.chargeHit = false;
+        });
+        break;
+      }
+    }
+  }
+
+  private scaledHit(hit: Hit, mult: number): Hit {
+    const amounts = { ...hit.amounts };
+    for (const k of Object.keys(amounts) as (keyof typeof amounts)[]) amounts[k] *= mult;
+    return { ...hit, amounts };
+  }
+
+  private bossShot(m: Monster, angle: number) {
+    const speed = m.def.projectileSpeed ?? 250;
+    const img = this.add.circle(m.x, m.y, 8, Number(m.def.color)).setStrokeStyle(2, 0xffffff, 0.8).setDepth(11);
+    this.enemyShots.push({ img, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, left: 2.2, hit: this.monsterHit(m) });
+  }
+
   private activeMonsters(): Monster[] {
     return (this.monsters.getChildren() as Monster[]).filter((m) => m.active);
   }
 
   private updateMonsters(dt: number) {
     for (const m of this.activeMonsters()) {
+      if (m.def.kind === 'boss') { this.updateBoss(m, dt); continue; }
       const d = Phaser.Math.Distance.Between(m.x, m.y, this.player.x, this.player.y);
       m.attackCd -= dt;
       if (m.def.kind === 'ranged') {
@@ -627,9 +763,21 @@ export class GameScene extends Phaser.Scene {
     const puff = this.add.circle(x, y, m.def.radius, Number(m.def.color), 0.6).setDepth(4);
     this.tweens.add({ targets: puff, scale: 1.8, alpha: 0, duration: 250, onComplete: () => puff.destroy() });
     if (!this.run) return;
-    const table = dropTableFor(this.run);
-    if (Math.random() < table.itemChance) this.spawnDrop(x, y, generateItem(m.level, Math.random, rollItemRarity(table)));
-    if (Math.random() < table.gemChance) this.spawnGemDrop(x + 14, y + 6, rollGem(table));
+    if (m.def.kind === 'boss') {
+      // 보스 전용 드랍 테이블: 장비 여러 개 확정 + 젬
+      const bt = bossDropTableFor(this.run);
+      for (let i = 0; i < bt.items; i++) {
+        const a = (Math.PI * 2 * i) / bt.items;
+        this.spawnDrop(x + Math.cos(a) * 40, y + Math.sin(a) * 40, generateItem(m.level, Math.random, rollItemRarity(bt)));
+      }
+      if (Math.random() < bt.gemChance) this.spawnGemDrop(x, y, rollGem(bt));
+      this.boss = null;
+      m.destroy();
+    } else {
+      const table = dropTableFor(this.run);
+      if (Math.random() < table.itemChance) this.spawnDrop(x, y, generateItem(m.level, Math.random, rollItemRarity(table)));
+      if (Math.random() < table.gemChance) this.spawnGemDrop(x + 14, y + 6, rollGem(table));
+    }
 
     // 경험치
     const ups = addXp(this.build, monsterXp(m.level, m.def.xp, this.build.level));
@@ -640,11 +788,13 @@ export class GameScene extends Phaser.Scene {
       this.mana = f.maxMana;
       this.floatText(this.player.x, this.player.y - 56, `레벨 업! Lv.${this.build.level}`, '#d1b3ff', true);
     }
-    this.checkClear();
+    if (m.def.kind === 'boss') this.checkClear(true);
+    else if (!this.bossSpawned && this.kills >= MAPS.killTarget) this.spawnBoss();
   }
 
-  private checkClear() {
-    if (this.cleared || !this.run || this.kills < MAPS.killTarget) return;
+  /** 보스를 잡으면 클리어 */
+  private checkClear(bossDown = false) {
+    if (this.cleared || !this.run || !bossDown) return;
     this.cleared = true;
     recordClear(this.build.progress, this.run);
     saveBuild(this.build);
@@ -777,7 +927,7 @@ export class GameScene extends Phaser.Scene {
   private drawOverlay() {
     const g = this.overlay.clear();
     for (const m of this.activeMonsters()) {
-      if (m.life >= m.maxLife) continue;
+      if (m.life >= m.maxLife || m.def.kind === 'boss') continue;
       const w = 30, x = m.x - w / 2, y = m.y - m.def.radius - 8;
       g.fillStyle(0x000000, 0.6).fillRect(x - 1, y - 1, w + 2, 6);
       g.fillStyle(0xe53935).fillRect(x, y, w * Math.max(0, m.life / m.maxLife), 4);
@@ -792,6 +942,8 @@ export class GameScene extends Phaser.Scene {
     this.hudText = this.add.text(16, 62, '', style).setScrollFactor(0).setDepth(1000);
     this.infoText = this.add.text(0, 16, '', { ...style, align: 'right', color: '#9aa0aa' })
       .setOrigin(1, 0).setScrollFactor(0).setDepth(1000);
+    this.bossText = this.add.text(0, 0, '', { ...style, fontStyle: 'bold', color: '#ffd54f', stroke: '#000000', strokeThickness: 3 })
+      .setOrigin(0.5, 1).setScrollFactor(0).setDepth(1000);
 
     // 스킬 버튼: 1번은 크게, 나머지는 그 둘레에 부채꼴로
     this.skillBtns = this.skills.map((a, i) => {
@@ -853,11 +1005,23 @@ export class GameScene extends Phaser.Scene {
     this.hudText.setText(
       `Lv.${this.build.level}  생명력 ${Math.max(0, Math.ceil(this.life))}/${f.maxLife}  보호막 ${Math.floor(this.shield)}/${f.maxShield}  마나 ${Math.floor(this.mana)}/${f.maxMana}`,
     );
+    const ELEM = { physical: '물리', fire: '화염', cold: '냉기', lightning: '번개' } as const;
+    const goal = this.cleared ? '클리어' : this.bossSpawned ? `보스 ${MONSTERS[this.map.boss].name}` : `처치 ${Math.min(this.kills, MAPS.killTarget)}/${MAPS.killTarget}`;
+    const mobs = this.run?.mode === 'mapping' ? `몹 ${ELEM[mobElement(this.run)]} · ` : '';
     this.infoText.setText(
       `${this.run ? runName(this.run) : ''} (Lv.${this.level})\n` +
-      `처치 ${Math.min(this.kills, MAPS.killTarget)}/${MAPS.killTarget}   ${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}\n` +
+      `${mobs}${goal}   ${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}\n` +
       `기본공격 DPS ${expectedDps(this.stats, this.basic).toFixed(1)}`,
     );
+    // 보스 체력 바 (화면 위 가운데)
+    const bw = Math.min(380, this.scale.width - 40);
+    const bx = (this.scale.width - bw) / 2;
+    const by = this.isPortrait() ? 236 : 104; // 세로: 오른쪽 위 버튼 아래
+    if (this.boss?.active) {
+      g.fillStyle(0x000000, 0.65).fillRect(bx - 2, by - 2, bw + 4, 14);
+      g.fillStyle(0xc62828).fillRect(bx, by, bw * Math.max(0, this.boss.life / this.boss.maxLife), 10);
+      this.bossText.setPosition(this.scale.width / 2, by - 4).setText(this.boss.def.name).setVisible(true);
+    } else this.bossText.setVisible(false);
     // 경험치 바
     g.fillStyle(0x000000, 0.55).fillRect(14, 54, 224, 6);
     g.fillStyle(0xb388ff).fillRect(16, 55, 220 * Math.min(1, this.build.xp / xpToNext(this.build.level)), 4);
