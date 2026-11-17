@@ -1,10 +1,19 @@
 // 가방·장비 창. 게임 캔버스 위에 HTML로 띄운다.
 import './inventory.css';
 import {
-  BAG_SIZE, SUMMARY_LABELS, discard, equipFromBag, statsFor, summarize, unequip,
+  BAG_SIZE, SUMMARY_LABELS, activeSkills, discard, equipFromBag, freeGems, socketGem, socketsOf, statsFor, summarize, unequip,
   type Build, type Summary,
 } from '../core/build';
 import { RARITY_NAMES, SLOTS, SLOT_NAMES, BASES, describeMod, type Item } from '../core/items';
+import { canSupport, skillNumbers } from '../core/skills';
+import type { Tag } from '../core/types';
+import { SKILLS, SUPPORTS } from '../data';
+
+const TAG_KO: Record<Tag, string> = {
+  attack: '공격', spell: '주문', melee: '근접', ranged: '원거리', projectile: '투사체', area: '범위',
+  instant: '즉발', sustained: '지속', str: '힘', dex: '민첩', int: '지능',
+  physical: '물리', fire: '화염', cold: '냉기', lightning: '번개', elemental: '원소',
+};
 
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
 
@@ -29,6 +38,9 @@ export class InventoryUI {
   private readonly root: HTMLElement;
   private readonly button: HTMLButtonElement;
   private selected: { where: 'bag' | 'equip'; uid: string } | null = null;
+  private tab: 'gear' | 'skills' = 'gear';
+  /** 스킬 탭에서 고른 보조 젬 칸 */
+  private socket: { skillId: string; index: number } | null = null;
 
   constructor(
     private readonly getBuild: () => Build,
@@ -75,7 +87,7 @@ export class InventoryUI {
   refreshButton() {
     const n = this.getBuild().bag.length;
     const key = matchMedia('(pointer: coarse)').matches ? '' : ' <span class="badge">I</span>';
-    this.button.innerHTML = `가방 <span class="badge">${n}/${BAG_SIZE}</span>${key}`;
+    this.button.innerHTML = `가방·스킬 <span class="badge">${n}/${BAG_SIZE}</span>${key}`;
   }
 
   private onKey = (e: KeyboardEvent) => {
@@ -99,6 +111,16 @@ export class InventoryUI {
     const { act, uid, where } = el.dataset;
     switch (act) {
       case 'close': this.toggle(false); return;
+      case 'tab': this.tab = el.dataset.tab as 'gear' | 'skills'; break;
+      case 'socket': this.socket = { skillId: el.dataset.skill!, index: Number(el.dataset.index) }; break;
+      case 'socket-cancel': this.socket = null; break;
+      case 'gem':
+        // 끼우거나 빼면 칸 선택을 풀어서 가려진 스킬 카드가 다시 보이게
+        if (this.socket && socketGem(b, this.socket.skillId, this.socket.index, el.dataset.gem || null)) {
+          this.socket = null;
+          this.onChange();
+        }
+        break;
       case 'select': this.selected = { where: where as 'bag' | 'equip', uid: uid! }; break;
       case 'equip': if (uid) { equipFromBag(b, uid); this.selected = { where: 'equip', uid }; this.onChange(); } break;
       case 'unequip': {
@@ -115,6 +137,15 @@ export class InventoryUI {
     this.refreshButton();
     if (!this.isOpen) return;
     const b = this.getBuild();
+    const tabs = `<nav class="inv-tabs">
+        <button type="button" data-act="tab" data-tab="gear" class="${this.tab === 'gear' ? 'on' : ''}">장비</button>
+        <button type="button" data-act="tab" data-tab="skills" class="${this.tab === 'skills' ? 'on' : ''}">스킬</button></nav>`;
+    const header = `<header>${tabs}<span class="hint">I · Tab · Esc 로 닫기 · 열려 있는 동안 일시정지</span>
+        <button type="button" data-act="close">닫기</button></header>`;
+    if (this.tab === 'skills') {
+      this.root.innerHTML = header + this.skillsTab(b);
+      return;
+    }
     const curStats = statsFor(b);
     const cur = summarize(b, curStats);
     const sel = this.findSelected();
@@ -143,13 +174,58 @@ export class InventoryUI {
       ? `<div class="inv-bag">${b.bag.map((i) => tile(i, 'bag')).join('')}</div>`
       : '<p class="inv-empty">비어 있음. 몬스터를 처치하면 장비가 떨어집니다.</p>';
 
-    this.root.innerHTML = `
-      <header><h2>장비</h2><span class="hint">I · Tab · Esc 로 닫기 · 열려 있는 동안 일시정지</span>
-        <button type="button" data-act="close">닫기</button></header>
+    this.root.innerHTML = `${header}
       <section><h3>착용 중</h3><div class="inv-slots">${slots}</div><dl class="inv-stats wide-only">${statRows}</dl></section>
       <section><h3>가방 ${b.bag.length}/${BAG_SIZE}</h3>${bag}</section>
       <section class="narrow-only"><h3>능력치</h3><dl class="inv-stats">${statRows}</dl></section>
       <section class="inv-detail">${sel ? this.detail(b, sel, cur) : '<p class="inv-empty">장비를 누르면 옵션과 비교가 보입니다.</p>'}</section>`;
+  }
+
+  private skillsTab(b: Build): string {
+    const actives = activeSkills(b);
+    const cards = actives.map((a, i) => {
+      const id = a.def.id;
+      const chips = a.def.tags.map((t) => `<span class="chip">${TAG_KO[t]}</span>`).join('');
+      const nums = skillNumbers(a).map((r) => `<dt>${r.label}</dt><dd>${r.value}</dd>`).join('');
+      const sockets = socketsOf(b, id).map((g, idx) => {
+        const on = this.socket?.skillId === id && this.socket.index === idx ? ' selected' : '';
+        return `<button type="button" class="gem-socket${g ? ' filled' : ''}${on}" data-act="socket" data-skill="${id}" data-index="${idx}">
+          ${g ? esc(SUPPORTS[g]?.name ?? g) : '+ 보조 젬'}</button>`;
+      }).join('');
+      return `<article class="skill-card">
+        <h4><span class="key">${i + 1}</span>${esc(a.def.name)}</h4>
+        <div class="chips">${chips}</div>
+        <p class="desc">${esc(a.def.description)}</p>
+        <dl class="inv-stats">${nums}</dl>
+        <div class="sockets">${sockets}</div></article>`;
+    }).join('');
+
+    return `<section class="skills-list"><h3>스킬 (보조 젬 칸을 눌러 젬을 끼우세요)</h3><div class="skill-cards">${cards}</div></section>
+      <section class="inv-detail">${this.gemPicker(b)}</section>`;
+  }
+
+  private gemPicker(b: Build): string {
+    const owned = Object.keys(SUPPORTS).filter((g) => (b.gems[g] ?? 0) > 0);
+    if (!this.socket) {
+      const list = owned.map((g) => `<li><b>${esc(SUPPORTS[g].name)}</b> ×${b.gems[g]}<br><span class="dim">${esc(SUPPORTS[g].description)}</span></li>`).join('');
+      return `<h3>가진 보조 젬</h3>${list ? `<ul class="gem-list">${list}</ul>` : '<p class="inv-empty">없음. 몬스터가 가끔 떨어뜨립니다.</p>'}`;
+    }
+    const skill = SKILLS[this.socket.skillId];
+    const current = socketsOf(b, skill.id)[this.socket.index];
+    const rows = owned.map((g) => {
+      const sup = SUPPORTS[g];
+      const ok = canSupport(skill, sup);
+      const free = freeGems(b, g);
+      const already = socketsOf(b, skill.id).includes(g);
+      const why = !ok ? `${sup.requires!.map((t) => TAG_KO[t]).join('/')} 스킬 전용` : already ? '이미 연결됨' : free <= 0 ? '모두 사용 중' : `남은 개수 ${free}`;
+      const disabled = !ok || already || free <= 0;
+      return `<button type="button" class="gem-option" data-act="gem" data-gem="${g}" ${disabled ? 'disabled' : ''}>
+        <b>${esc(sup.name)}</b> <span class="dim">· ${why}</span><br><span class="dim">${esc(sup.description)}</span></button>`;
+    }).join('');
+    const remove = current ? `<button type="button" data-act="gem" data-gem="">${esc(SUPPORTS[current].name)} 빼기</button>` : '';
+    return `<p class="title">${esc(skill.name)} · ${this.socket.index + 1}번 칸</p>
+      <div class="inv-actions">${remove}<button type="button" data-act="socket-cancel">취소</button></div>
+      <div class="gem-options">${rows || '<p class="inv-empty">가진 보조 젬이 없습니다.</p>'}</div>`;
   }
 
   private detail(b: Build, item: Item, cur: Summary): string {

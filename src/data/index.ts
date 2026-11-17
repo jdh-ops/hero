@@ -1,8 +1,9 @@
 // 데이터 테이블(JSON)을 타입이 붙은 형태로 내보낸다.
-import type { ElementType, Mod, SkillDef } from '../core/types';
+import type { ElementType, Mod, SkillDef, SupportDef } from '../core/types';
 import skillsJson from './skills.json';
 import classesJson from './classes.json';
 import monstersJson from './monsters.json';
+import supportsJson from './supports.json';
 
 export interface ClassDef {
   id: string;
@@ -30,6 +31,7 @@ export interface MonsterDef {
   color: string;
 }
 
-export const SKILLS = skillsJson as Record<string, SkillDef>;
+export const SKILLS = skillsJson as unknown as Record<string, SkillDef>;
+export const SUPPORTS = supportsJson as unknown as Record<string, SupportDef>;
 export const CLASSES = classesJson as Record<string, ClassDef>;
 export const MONSTERS = monstersJson as Record<string, MonsterDef>;

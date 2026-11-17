@@ -52,7 +52,40 @@ export interface SkillDef {
   cooldown: number;
   manaCost: number;
   range: number;
-  /** 범위 스킬 반경, 근접 기본공격은 부채꼴 각도(도) */
+  /** 범위 스킬 반경 */
   radius?: number;
+  /** 부채꼴 각도(도) */
   arc?: number;
+  /** 화면에 나타나는 방식 */
+  shape: 'cone' | 'nova' | 'projectile' | 'ground';
+  description: string;
+  /** 투사체 */
+  projectiles?: number;
+  projectileSpeed?: number;
+  pierce?: number;
+  /** 지속(장판) */
+  duration?: number;
+  tickInterval?: number;
+  /** 물리 피해의 일부를 다른 타입 피해로 추가로 얻음 (보조 젬 등) */
+  gainAs?: { type: DamageType; ratio: number }[];
+}
+
+/** 보조 젬. 연결한 스킬 하나에만 효과 */
+export interface SupportDef {
+  id: string;
+  name: string;
+  description: string;
+  /** 이 태그 중 하나라도 있는 스킬에만 연결 가능 (없으면 모든 스킬) */
+  requires?: Tag[];
+  /** 스킬 계산에 더해지는 수치 (추가 피해 등) */
+  mods?: Mod[];
+  /** 스킬 자체 변경 */
+  addTags?: Tag[];
+  manaMult?: number;
+  cooldownMult?: number;
+  radiusMult?: number;
+  extraProjectiles?: number;
+  extraPierce?: number;
+  durationMult?: number;
+  gainAs?: { type: DamageType; ratio: number }[];
 }

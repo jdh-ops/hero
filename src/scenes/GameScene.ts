@@ -5,15 +5,18 @@ import {
   type Defender, type Hit,
 } from '../core/damage';
 import type { SkillDef } from '../core/types';
-import { classOf, loadBuild, pickUp, saveBuild, statsFor, type Build } from '../core/build';
+import { activeSkills, classOf, loadBuild, pickUp, pickUpGem, saveBuild, statsFor, type Build } from '../core/build';
+import type { ActiveSkill } from '../core/skills';
+import type { StatSheet as Sheet } from '../core/stats';
 import { generateItem, type Item, type Rarity } from '../core/items';
-import { MONSTERS, SKILLS, type MonsterDef } from '../data';
+import { MONSTERS, SKILLS, SUPPORTS, type MonsterDef } from '../data';
 import { Joystick } from '../ui/Joystick';
 import { InventoryUI } from '../ui/Inventory';
 
 // 전투 프로토타입
 // 2단계: 이동, 자동 기본공격, 스킬 1개, 몬스터 1종
 // 3단계: 드랍 → 줍기 → 착용 → 스탯 반영 (장비는 죽어도 유지, 로컬 저장)
+// 4단계: 스킬 4개(범위·부채꼴·투사체·장판) + 보조 젬
 
 const WORLD = 2400;
 const PLAYER_RADIUS = 16;
@@ -22,6 +25,9 @@ const MAX_MONSTERS = 35;
 const LEVEL_UP_EVERY = 45;
 /** 몬스터 처치 시 장비가 떨어질 확률 */
 const DROP_CHANCE = 0.2;
+/** 몬스터 처치 시 보조 젬이 떨어질 확률 */
+const GEM_DROP_CHANCE = 0.05;
+const GEM_COLOR = 0x66d17a;
 const PICKUP_RADIUS = 50;
 const RARITY_COLOR: Record<Rarity, number> = { normal: 0xc9ccd2, magic: 0x7aa7ff, rare: 0xffd54f };
 
@@ -41,7 +47,10 @@ class Monster extends Phaser.Physics.Arcade.Image {
 }
 
 interface FloatText { text: Phaser.GameObjects.Text; life: number; vy: number }
-interface Drop { item: Item; gem: Phaser.GameObjects.Rectangle; label: Phaser.GameObjects.Text }
+interface Drop { item?: Item; gemId?: string; gem: Phaser.GameObjects.Shape; label: Phaser.GameObjects.Text }
+interface Projectile { img: Phaser.GameObjects.Arc; vx: number; vy: number; travelled: number; maxDist: number; pierce: number; hit: Set<Monster>; skill: ActiveSkill }
+interface Ground { x: number; y: number; r: number; left: number; tick: number; gfx: Phaser.GameObjects.Arc; skill: ActiveSkill }
+interface SkillButton { box: Phaser.GameObjects.Container; gfx: Phaser.GameObjects.Graphics; r: number }
 
 export class GameScene extends Phaser.Scene {
   private build!: Build;
@@ -49,18 +58,20 @@ export class GameScene extends Phaser.Scene {
   private inventory!: InventoryUI;
   private drops: Drop[] = [];
   private basic!: SkillDef;
-  private skill!: SkillDef;
+  private skills: ActiveSkill[] = [];
+  private skillCds: number[] = [];
+  private projectiles: Projectile[] = [];
+  private grounds: Ground[] = [];
   private player!: Phaser.Physics.Arcade.Image;
   private monsters!: Phaser.Physics.Arcade.Group;
   private joystick!: Joystick;
-  private keys!: Record<'up' | 'down' | 'left' | 'right' | 'w' | 'a' | 's' | 'd' | 'skill' | 'skill2', Phaser.Input.Keyboard.Key>;
+  private keys!: Record<'up' | 'down' | 'left' | 'right' | 'w' | 'a' | 's' | 'd' | 'space' | 'k1' | 'k2' | 'k3' | 'k4', Phaser.Input.Keyboard.Key>;
 
   private life = 0;
   private mana = 0;
   private shield = 0;
   private sinceHit = 99;
   private actionCd = 0;
-  private skillCd = 0;
   private facing = 0;
   private elapsed = 0;
   private spawnTimer = 0;
@@ -72,8 +83,7 @@ export class GameScene extends Phaser.Scene {
   private hudText!: Phaser.GameObjects.Text;
   private infoText!: Phaser.GameObjects.Text;
   private hintText?: Phaser.GameObjects.Text;
-  private skillBtn!: Phaser.GameObjects.Container;
-  private skillBtnGfx!: Phaser.GameObjects.Graphics;
+  private skillBtns: SkillButton[] = [];
   private floats: FloatText[] = [];
 
   constructor() {
@@ -103,7 +113,7 @@ export class GameScene extends Phaser.Scene {
 
     this.inventory = new InventoryUI(
       () => this.build,
-      () => this.onGearChanged(),
+      () => this.onBuildChanged(),
       (open) => (open ? this.scene.pause() : this.scene.resume()),
     );
     this.events.once('shutdown', () => this.inventory.destroy());
@@ -117,19 +127,27 @@ export class GameScene extends Phaser.Scene {
     for (let i = 0; i < count; i++) this.spawnDrop(this.player.x + 80 + i * 20, this.player.y, generateItem(ilvl));
   }
 
+  /** 디버그: 보조 젬을 하나씩 모두 줌 */
+  debugGems() {
+    for (const id of Object.keys(SUPPORTS)) pickUpGem(this.build, id);
+    this.onBuildChanged();
+  }
+
   private resetState() {
     persistentBuild ??= loadBuild();
     this.build = persistentBuild;
     const cls = classOf(this.build);
     this.stats = statsFor(this.build);
     this.basic = SKILLS[cls.basicAttack];
-    this.skill = SKILLS[cls.skills[0]];
+    this.skills = activeSkills(this.build);
+    this.skillCds = this.skills.map(() => 0);
+    this.projectiles = [];
+    this.grounds = [];
     this.life = this.stats.flat.maxLife;
     this.mana = this.stats.flat.maxMana;
     this.shield = this.stats.flat.maxShield;
     this.sinceHit = 99;
     this.actionCd = 0;
-    this.skillCd = 0;
     this.elapsed = 0;
     this.spawnTimer = 0;
     this.kills = 0;
@@ -138,13 +156,14 @@ export class GameScene extends Phaser.Scene {
     this.drops = [];
   }
 
-  /** 장비가 바뀌면 스탯을 다시 계산. 생명력 등은 비율을 유지 */
-  private onGearChanged() {
+  /** 장비·보조 젬이 바뀌면 스탯과 스킬을 다시 계산. 생명력 등은 비율을 유지 */
+  private onBuildChanged() {
     const old = this.stats.flat;
     const lifeR = this.life / old.maxLife;
     const manaR = this.mana / old.maxMana;
     const shieldR = old.maxShield > 0 ? this.shield / old.maxShield : 1;
     this.stats = statsFor(this.build);
+    this.skills = activeSkills(this.build);
     const f = this.stats.flat;
     if (!this.dead) {
       this.life = f.maxLife * lifeR;
@@ -185,19 +204,24 @@ export class GameScene extends Phaser.Scene {
     const K = Phaser.Input.Keyboard.KeyCodes;
     this.keys = kb.addKeys({
       up: K.UP, down: K.DOWN, left: K.LEFT, right: K.RIGHT,
-      w: K.W, a: K.A, s: K.S, d: K.D, skill: K.SPACE, skill2: K.J,
+      w: K.W, a: K.A, s: K.S, d: K.D,
+      space: K.SPACE, k1: K.ONE, k2: K.TWO, k3: K.THREE, k4: K.FOUR,
     }) as GameScene['keys'];
 
     this.joystick = new Joystick(this, (p) => this.inJoystickZone(p));
     this.input.on('pointerdown', (p: Phaser.Input.Pointer) => {
       if (this.dead) this.scene.restart();
-      else if (this.isOnSkillButton(p)) this.castSkill();
+      else {
+        const i = this.skillButtonAt(p);
+        if (i >= 0) this.castSkill(i);
+      }
     });
     kb.on('keydown-ENTER', () => this.dead && this.scene.restart());
   }
 
-  private isOnSkillButton(p: Phaser.Input.Pointer) {
-    return Phaser.Math.Distance.Between(p.x, p.y, this.skillBtn.x, this.skillBtn.y) < 60;
+  /** 누른 위치의 스킬 버튼 번호 (없으면 -1). 손가락이라 실제보다 조금 넓게 */
+  private skillButtonAt(p: Phaser.Input.Pointer): number {
+    return this.skillBtns.findIndex((b) => Phaser.Math.Distance.Between(p.x, p.y, b.box.x, b.box.y) < b.r + 10);
   }
 
   private moveVector(): Phaser.Math.Vector2 {
@@ -222,8 +246,14 @@ export class GameScene extends Phaser.Scene {
     this.updateSpawns(dt);
     this.updateMonsters(dt);
     this.updateCombat(dt);
+    this.updateProjectiles(dt);
+    this.updateGrounds(dt);
     this.updatePickups();
-    if (Phaser.Input.Keyboard.JustDown(this.keys.skill) || Phaser.Input.Keyboard.JustDown(this.keys.skill2)) this.castSkill();
+    const k = this.keys, J = Phaser.Input.Keyboard.JustDown;
+    if (J(k.space) || J(k.k1)) this.castSkill(0);
+    if (J(k.k2)) this.castSkill(1);
+    if (J(k.k3)) this.castSkill(2);
+    if (J(k.k4)) this.castSkill(3);
 
     this.drawOverlay();
     this.drawHud();
@@ -326,59 +356,143 @@ export class GameScene extends Phaser.Scene {
 
   // ---------- 전투 ----------
 
+  private distTo(m: Monster) {
+    return Phaser.Math.Distance.Between(this.player.x, this.player.y, m.x, m.y) - m.def.radius;
+  }
+
+  private nearestMonster(maxDist: number): Monster | null {
+    let target: Monster | null = null;
+    let best = maxDist;
+    for (const m of this.activeMonsters()) {
+      const d = this.distTo(m);
+      if (d < best) { best = d; target = m; }
+    }
+    return target;
+  }
+
+  /** 가까운 적 쪽으로 몸을 돌림. 없으면 지금 바라보는 방향 */
+  private aim(maxDist: number): number {
+    const t = this.nearestMonster(maxDist);
+    if (t) this.facing = Phaser.Math.Angle.Between(this.player.x, this.player.y, t.x, t.y);
+    this.player.setRotation(this.facing);
+    return this.facing;
+  }
+
   private updateCombat(dt: number) {
     this.actionCd -= dt;
-    this.skillCd = Math.max(0, this.skillCd - dt);
+    for (let i = 0; i < this.skillCds.length; i++) this.skillCds[i] = Math.max(0, this.skillCds[i] - dt);
     if (this.actionCd > 0) return;
 
-    // 기본공격: 사거리 안의 가장 가까운 적에게 자동으로 휘두름
+    // 기본공격: 사거리 안에 적이 있으면 자동으로 휘두름
     const range = this.basic.range;
-    let target: Monster | null = null;
-    let best = Infinity;
-    for (const m of this.activeMonsters()) {
-      const d = Phaser.Math.Distance.Between(this.player.x, this.player.y, m.x, m.y) - m.def.radius;
-      if (d < range && d < best) { best = d; target = m; }
-    }
-    if (!target) return;
-
-    const angle = Phaser.Math.Angle.Between(this.player.x, this.player.y, target.x, target.y);
-    this.facing = angle;
-    this.player.setRotation(angle);
+    if (!this.nearestMonster(range)) return;
+    const angle = this.aim(range);
     this.actionCd = this.basic.useTime / this.stats.actionSpeed;
+    this.hitCone(angle, range, this.basic.arc ?? 90, this.basic, this.stats);
+    this.coneEffect(angle, range, this.basic.arc ?? 90, 0xffffff, 150);
+  }
 
-    const half = Phaser.Math.DegToRad((this.basic.arc ?? 90) / 2);
+  private hitCone(angle: number, range: number, arcDeg: number, def: SkillDef, stats: Sheet) {
+    const half = Phaser.Math.DegToRad(arcDeg / 2);
     for (const m of this.activeMonsters()) {
-      const d = Phaser.Math.Distance.Between(this.player.x, this.player.y, m.x, m.y) - m.def.radius;
       const a = Phaser.Math.Angle.Between(this.player.x, this.player.y, m.x, m.y);
-      if (d < range && Math.abs(Phaser.Math.Angle.Wrap(a - angle)) <= half) this.hitMonster(m, this.basic);
+      if (this.distTo(m) < range && Math.abs(Phaser.Math.Angle.Wrap(a - angle)) <= half) this.hitMonster(m, def, stats);
     }
-    this.slashEffect(angle, range, half);
   }
 
-  private castSkill() {
-    if (this.dead || this.skillCd > 0 || this.mana < this.skill.manaCost) return;
-    this.mana -= this.skill.manaCost;
-    this.skillCd = this.skill.cooldown;
-    this.actionCd = Math.max(this.actionCd, this.skill.useTime / this.stats.actionSpeed);
+  private castSkill(i: number) {
+    const a = this.skills[i];
+    if (!a || this.dead || this.skillCds[i] > 0 || this.mana < a.def.manaCost) return;
+    const d = a.def;
+    this.mana -= d.manaCost;
+    this.skillCds[i] = d.cooldown;
+    this.actionCd = Math.max(this.actionCd, d.useTime / a.stats.actionSpeed);
 
-    const r = this.skill.radius ?? 100;
-    for (const m of this.activeMonsters()) {
-      if (Phaser.Math.Distance.Between(this.player.x, this.player.y, m.x, m.y) - m.def.radius < r) this.hitMonster(m, this.skill);
+    switch (d.shape) {
+      case 'nova': {
+        const r = d.radius ?? 100;
+        for (const m of this.activeMonsters()) if (this.distTo(m) < r) this.hitMonster(m, d, a.stats);
+        this.novaEffect(r, 0xffc857);
+        break;
+      }
+      case 'cone': {
+        const angle = this.aim(d.range * 1.5);
+        this.hitCone(angle, d.range, d.arc ?? 90, d, a.stats);
+        this.coneEffect(angle, d.range, d.arc ?? 90, 0xd9a35b, 280);
+        this.cameras.main.shake(90, 0.004);
+        break;
+      }
+      case 'projectile': {
+        const angle = this.aim(d.range);
+        const n = d.projectiles ?? 1;
+        const spread = Phaser.Math.DegToRad(12);
+        for (let k = 0; k < n; k++) {
+          const ang = angle + (k - (n - 1) / 2) * spread;
+          const img = this.add.circle(this.player.x, this.player.y, 7, 0xe0e0e0).setStrokeStyle(2, 0x555555).setDepth(12);
+          const speed = d.projectileSpeed ?? 500;
+          this.projectiles.push({
+            img, vx: Math.cos(ang) * speed, vy: Math.sin(ang) * speed,
+            travelled: 0, maxDist: d.range, pierce: d.pierce ?? 0, hit: new Set(), skill: a,
+          });
+        }
+        break;
+      }
+      case 'ground': {
+        const r = d.radius ?? 100;
+        const gfx = this.add.circle(this.player.x, this.player.y, r, 0xff6a2b, 0.22).setStrokeStyle(3, 0xff8a3d, 0.7).setDepth(2);
+        this.grounds.push({ x: this.player.x, y: this.player.y, r, left: d.duration ?? 3, tick: 0, gfx, skill: a });
+        break;
+      }
     }
-    this.whirlEffect(r);
   }
 
-  private hitMonster(m: Monster, skill: SkillDef) {
-    const hit = computeHit(this.stats, skill, 1);
+  private updateProjectiles(dt: number) {
+    this.projectiles = this.projectiles.filter((p) => {
+      p.img.x += p.vx * dt;
+      p.img.y += p.vy * dt;
+      p.travelled += Math.hypot(p.vx, p.vy) * dt;
+      for (const m of this.activeMonsters()) {
+        if (p.hit.has(m)) continue;
+        if (Phaser.Math.Distance.Between(p.img.x, p.img.y, m.x, m.y) > m.def.radius + 7) continue;
+        p.hit.add(m);
+        this.hitMonster(m, p.skill.def, p.skill.stats, p.img.x - p.vx, p.img.y - p.vy);
+        if (p.pierce-- <= 0) { p.img.destroy(); return false; }
+      }
+      if (p.travelled >= p.maxDist) { p.img.destroy(); return false; }
+      return true;
+    });
+  }
+
+  private updateGrounds(dt: number) {
+    this.grounds = this.grounds.filter((g) => {
+      g.left -= dt;
+      g.tick -= dt;
+      if (g.tick <= 0) {
+        g.tick = g.skill.def.tickInterval ?? 0.5;
+        for (const m of this.activeMonsters()) {
+          if (Phaser.Math.Distance.Between(g.x, g.y, m.x, m.y) - m.def.radius < g.r) this.hitMonster(m, g.skill.def, g.skill.stats, g.x, g.y, false);
+        }
+      }
+      g.gfx.setAlpha(Math.min(1, g.left / 0.5) * (0.8 + 0.2 * Math.sin(this.elapsed * 20)));
+      if (g.left <= 0) { g.gfx.destroy(); return false; }
+      return true;
+    });
+  }
+
+  /** fromX/fromY: 밀려나는 기준점 (기본은 플레이어) */
+  private hitMonster(m: Monster, def: SkillDef, stats: Sheet, fromX = this.player.x, fromY = this.player.y, knockback = true) {
+    if (!m.active) return;
+    const hit = computeHit(stats, def, 1);
     const result = mitigate(hit, m.defender);
     m.life -= result.total;
-    this.floatText(m.x, m.y - 20, String(Math.round(result.total)), result.crit ? '#ffd54f' : '#ffffff', result.crit);
+    const color = result.crit ? '#ffd54f' : hit.amounts.fire > hit.amounts.physical ? '#ffab73' : '#ffffff';
+    this.floatText(m.x, m.y - 20, String(Math.round(result.total)), color, result.crit);
 
-    // 살짝 밀려남
-    const a = Phaser.Math.Angle.Between(this.player.x, this.player.y, m.x, m.y);
-    m.x += Math.cos(a) * 6;
-    m.y += Math.sin(a) * 6;
-
+    if (knockback) {
+      const a = Phaser.Math.Angle.Between(fromX, fromY, m.x, m.y);
+      m.x += Math.cos(a) * 6;
+      m.y += Math.sin(a) * 6;
+    }
     if (m.life <= 0) this.killMonster(m);
   }
 
@@ -391,6 +505,9 @@ export class GameScene extends Phaser.Scene {
     const puff = this.add.circle(x, y, m.def.radius, Number(m.def.color), 0.6).setDepth(4);
     this.tweens.add({ targets: puff, scale: 1.8, alpha: 0, duration: 250, onComplete: () => puff.destroy() });
     if (Math.random() < DROP_CHANCE) this.spawnDrop(x, y, generateItem(m.level));
+    if (Math.random() < GEM_DROP_CHANCE) {
+      this.spawnGemDrop(x + 14, y + 6, Phaser.Utils.Array.GetRandom(Object.keys(SUPPORTS)));
+    }
   }
 
   // ---------- 드랍 / 줍기 ----------
@@ -408,10 +525,28 @@ export class GameScene extends Phaser.Scene {
     this.drops.push({ item, gem, label });
   }
 
+  private spawnGemDrop(x: number, y: number, gemId: string) {
+    const gem = this.add.circle(x, y, 7, GEM_COLOR).setStrokeStyle(2, 0x000000, 0.6).setDepth(3);
+    const label = this.add.text(x, y - 16, `보조 젬: ${SUPPORTS[gemId].name}`, {
+      fontFamily: 'system-ui, sans-serif', fontSize: '12px', color: '#8ee69c', stroke: '#000000', strokeThickness: 3,
+    }).setOrigin(0.5).setDepth(3);
+    this.tweens.add({ targets: gem, scale: 1.3, yoyo: true, repeat: -1, duration: 600 });
+    this.drops.push({ gemId, gem, label });
+  }
+
   private updatePickups() {
     this.drops = this.drops.filter((d) => {
       if (Phaser.Math.Distance.Between(this.player.x, this.player.y, d.gem.x, d.gem.y) > PICKUP_RADIUS) return true;
-      const result = pickUp(this.build, d.item);
+      if (d.gemId) {
+        pickUpGem(this.build, d.gemId);
+        this.floatText(this.player.x, this.player.y - 40, `보조 젬: ${SUPPORTS[d.gemId].name}`, '#8ee69c');
+        d.gem.destroy();
+        d.label.destroy();
+        saveBuild(this.build);
+        this.inventory.refreshButton();
+        return false;
+      }
+      const result = pickUp(this.build, d.item!);
       if (result === 'full') {
         if (!d.label.getData('warned')) {
           d.label.setData('warned', true);
@@ -419,11 +554,12 @@ export class GameScene extends Phaser.Scene {
         }
         return true;
       }
-      const color = Phaser.Display.Color.IntegerToColor(RARITY_COLOR[d.item.rarity]).rgba;
-      this.floatText(this.player.x, this.player.y - 40, result === 'equipped' ? `${d.item.name} 착용` : d.item.name, color);
+      const item = d.item!;
+      const color = Phaser.Display.Color.IntegerToColor(RARITY_COLOR[item.rarity]).rgba;
+      this.floatText(this.player.x, this.player.y - 40, result === 'equipped' ? `${item.name} 착용` : item.name, color);
       d.gem.destroy();
       d.label.destroy();
-      if (result === 'equipped') this.onGearChanged();
+      if (result === 'equipped') this.onBuildChanged();
       else { saveBuild(this.build); this.inventory.refreshButton(); }
       return false;
     });
@@ -444,15 +580,16 @@ export class GameScene extends Phaser.Scene {
 
   // ---------- 이펙트 ----------
 
-  private slashEffect(angle: number, range: number, half: number) {
+  private coneEffect(angle: number, range: number, arcDeg: number, color: number, duration: number) {
+    const half = Phaser.Math.DegToRad(arcDeg / 2);
     const g = this.add.graphics().setDepth(15);
-    g.fillStyle(0xffffff, 0.35);
+    g.fillStyle(color, 0.35);
     g.slice(this.player.x, this.player.y, range, angle - half, angle + half).fillPath();
-    this.tweens.add({ targets: g, alpha: 0, duration: 150, onComplete: () => g.destroy() });
+    this.tweens.add({ targets: g, alpha: 0, duration, onComplete: () => g.destroy() });
   }
 
-  private whirlEffect(r: number) {
-    const c = this.add.circle(this.player.x, this.player.y, r, 0xffc857, 0.25).setStrokeStyle(4, 0xffc857, 0.9).setDepth(15);
+  private novaEffect(r: number, color: number) {
+    const c = this.add.circle(this.player.x, this.player.y, r, color, 0.25).setStrokeStyle(4, color, 0.9).setDepth(15);
     c.setScale(0.3);
     this.tweens.add({ targets: c, scale: 1, alpha: 0, duration: 260, onComplete: () => c.destroy() });
   }
@@ -494,16 +631,21 @@ export class GameScene extends Phaser.Scene {
     this.infoText = this.add.text(0, 16, '', { ...style, align: 'right', color: '#9aa0aa' })
       .setOrigin(1, 0).setScrollFactor(0).setDepth(1000);
 
-    this.skillBtnGfx = this.add.graphics();
-    const label = this.add.text(0, 0, this.skill.name.replace(' ', '\n'), {
-      fontFamily: 'system-ui, sans-serif', fontSize: '15px', fontStyle: 'bold', color: '#ffffff', align: 'center',
-    }).setOrigin(0.5);
-    this.skillBtn = this.add.container(0, 0, [this.skillBtnGfx, label]).setScrollFactor(0).setDepth(1000);
+    // 스킬 버튼: 1번은 크게, 나머지는 그 둘레에 부채꼴로
+    this.skillBtns = this.skills.map((a, i) => {
+      const r = i === 0 ? 44 : 33;
+      const gfx = this.add.graphics();
+      const label = this.add.text(0, 0, a.def.name.replace(' ', '\n'), {
+        fontFamily: 'system-ui, sans-serif', fontSize: i === 0 ? '15px' : '12px', fontStyle: 'bold', color: '#ffffff', align: 'center',
+      }).setOrigin(0.5);
+      const box = this.add.container(0, 0, [gfx, label]).setScrollFactor(0).setDepth(1000);
+      return { box, gfx, r };
+    });
 
     const touch = this.sys.game.device.input.touch;
     const hint = touch
       ? (this.isPortrait() ? '아래쪽을 눌러 끌면 이동\n오른쪽 아래 버튼으로 스킬' : '왼쪽을 눌러 이동 · 오른쪽 버튼으로 스킬')
-      : '이동 WASD / 방향키 · 스킬 Space · 가방 I';
+      : '이동 WASD / 방향키 · 스킬 1~4 (Space = 1) · 가방 I';
     this.hintText = this.add.text(0, 0, `${hint}\n기본공격은 자동`, { ...style, align: 'center' })
       .setOrigin(0.5).setScrollFactor(0).setDepth(1000);
     this.tweens.add({ targets: this.hintText, alpha: 0, delay: 5000, duration: 800, onComplete: () => this.hintText?.destroy() });
@@ -515,7 +657,7 @@ export class GameScene extends Phaser.Scene {
 
   /** 세로: 화면 아래쪽 / 가로: 왼쪽 절반을 누르면 조이스틱 */
   private inJoystickZone(p: Phaser.Input.Pointer) {
-    if (this.isOnSkillButton(p)) return false;
+    if (this.skillButtonAt(p) >= 0) return false;
     return this.isPortrait() ? p.y > this.scale.height * 0.4 : p.x < this.scale.width * 0.5;
   }
 
@@ -523,7 +665,13 @@ export class GameScene extends Phaser.Scene {
     const { width, height } = this.scale;
     const portrait = this.isPortrait();
     // 세로 화면에서는 엄지가 닿기 쉽게 버튼을 조금 위로
-    this.skillBtn.setPosition(width - 86, height - (portrait ? 120 : 90));
+    const ax = width - 80, ay = height - (portrait ? 130 : 86);
+    const angles = [0, 180, 225, 270];
+    this.skillBtns.forEach((b, i) => {
+      if (i === 0) { b.box.setPosition(ax, ay); return; }
+      const rad = Phaser.Math.DegToRad(angles[i] ?? 270);
+      b.box.setPosition(ax + Math.cos(rad) * 98, ay + Math.sin(rad) * 98);
+    });
     this.infoText.setX(width - 16);
     this.hintText?.setPosition(width / 2, portrait ? height * 0.62 : height - 50);
   }
@@ -549,13 +697,17 @@ export class GameScene extends Phaser.Scene {
     );
 
     // 스킬 버튼 + 쿨다운
-    const bg = this.skillBtnGfx.clear();
-    const ready = this.skillCd <= 0 && this.mana >= this.skill.manaCost;
-    bg.fillStyle(ready ? 0xc9822b : 0x555555, 0.85).fillCircle(0, 0, 46);
-    bg.lineStyle(3, 0xffffff, 0.6).strokeCircle(0, 0, 46);
-    if (this.skillCd > 0) {
-      const ratio = this.skillCd / this.skill.cooldown;
-      bg.fillStyle(0x000000, 0.55).slice(0, 0, 46, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * ratio).fillPath();
-    }
+    this.skillBtns.forEach((b, i) => {
+      const a = this.skills[i];
+      const cd = this.skillCds[i];
+      const ready = cd <= 0 && this.mana >= a.def.manaCost;
+      const g2 = b.gfx.clear();
+      g2.fillStyle(ready ? 0xc9822b : 0x555555, 0.85).fillCircle(0, 0, b.r);
+      g2.lineStyle(3, 0xffffff, 0.6).strokeCircle(0, 0, b.r);
+      if (cd > 0 && a.def.cooldown > 0) {
+        const ratio = cd / a.def.cooldown;
+        g2.fillStyle(0x000000, 0.55).slice(0, 0, b.r, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * ratio).fillPath();
+      }
+    });
   }
 }

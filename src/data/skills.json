@@ -1,28 +1,119 @@
 {
-  "warrior_slash": {
-    "id": "warrior_slash",
-    "name": "베기",
-    "tags": ["attack", "melee", "physical", "str", "instant"],
-    "damageType": "physical",
-    "baseMin": 6, "baseMax": 10,
-    "effectiveness": 1.0,
-    "useTime": 0.7,
-    "cooldown": 0,
-    "manaCost": 0,
-    "range": 75,
-    "arc": 110
-  },
-  "warrior_whirl": {
-    "id": "warrior_whirl",
-    "name": "회전 베기",
-    "tags": ["attack", "melee", "area", "physical", "str", "instant"],
-    "damageType": "physical",
-    "baseMin": 10, "baseMax": 16,
-    "effectiveness": 1.4,
-    "useTime": 0.4,
-    "cooldown": 2.5,
-    "manaCost": 12,
-    "range": 0,
-    "radius": 130
-  }
+ "warrior_slash": {
+  "id": "warrior_slash",
+  "name": "베기",
+  "description": "앞쪽 부채꼴을 벱니다. 가까운 적이 있으면 자동으로 사용합니다.",
+  "shape": "cone",
+  "tags": [
+   "attack",
+   "melee",
+   "physical",
+   "str",
+   "instant"
+  ],
+  "damageType": "physical",
+  "baseMin": 6,
+  "baseMax": 10,
+  "effectiveness": 1.0,
+  "useTime": 0.7,
+  "cooldown": 0,
+  "manaCost": 0,
+  "range": 75,
+  "arc": 110
+ },
+ "warrior_whirl": {
+  "id": "warrior_whirl",
+  "name": "회전 베기",
+  "description": "몸을 돌려 주변의 모든 적을 벱니다.",
+  "shape": "nova",
+  "tags": [
+   "attack",
+   "melee",
+   "area",
+   "physical",
+   "str",
+   "instant"
+  ],
+  "damageType": "physical",
+  "baseMin": 10,
+  "baseMax": 16,
+  "effectiveness": 1.4,
+  "useTime": 0.4,
+  "cooldown": 2.5,
+  "manaCost": 12,
+  "range": 0,
+  "radius": 130
+ },
+ "warrior_slam": {
+  "id": "warrior_slam",
+  "name": "대지 강타",
+  "description": "앞쪽 넓은 부채꼴을 내려찍어 큰 피해를 줍니다.",
+  "shape": "cone",
+  "tags": [
+   "attack",
+   "melee",
+   "area",
+   "physical",
+   "str",
+   "instant"
+  ],
+  "damageType": "physical",
+  "baseMin": 18,
+  "baseMax": 28,
+  "effectiveness": 2.4,
+  "useTime": 0.6,
+  "cooldown": 5,
+  "manaCost": 18,
+  "range": 170,
+  "arc": 90
+ },
+ "warrior_axe": {
+  "id": "warrior_axe",
+  "name": "투척 도끼",
+  "description": "가장 가까운 적에게 도끼를 던집니다. 적 1명을 관통합니다.",
+  "shape": "projectile",
+  "tags": [
+   "attack",
+   "ranged",
+   "projectile",
+   "physical",
+   "dex",
+   "instant"
+  ],
+  "damageType": "physical",
+  "baseMin": 8,
+  "baseMax": 14,
+  "effectiveness": 1.0,
+  "useTime": 0.35,
+  "cooldown": 0.8,
+  "manaCost": 5,
+  "range": 420,
+  "projectiles": 1,
+  "projectileSpeed": 520,
+  "pierce": 1
+ },
+ "warrior_blaze": {
+  "id": "warrior_blaze",
+  "name": "불타는 땅",
+  "description": "발밑에 불길을 남겨 3초 동안 0.5초마다 화염 피해를 줍니다.",
+  "shape": "ground",
+  "tags": [
+   "attack",
+   "area",
+   "fire",
+   "str",
+   "sustained"
+  ],
+  "damageType": "fire",
+  "baseMin": 4,
+  "baseMax": 7,
+  "effectiveness": 1.0,
+  "useTime": 0.4,
+  "cooldown": 6,
+  "manaCost": 15,
+  "range": 0,
+  "radius": 110,
+  "duration": 3,
+  "tickInterval": 0.5
+ }
 }

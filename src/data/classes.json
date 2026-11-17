@@ -4,7 +4,10 @@
     "name": "전사",
     "basicAttack": "warrior_slash",
     "skills": [
-      "warrior_whirl"
+      "warrior_whirl",
+      "warrior_slam",
+      "warrior_axe",
+      "warrior_blaze"
     ],
     "mods": [
       {
@@ -35,12 +38,12 @@
       {
         "kind": "flat",
         "stat": "maxMana",
-        "value": 40
+        "value": 55
       },
       {
         "kind": "flat",
         "stat": "manaRegen",
-        "value": 4
+        "value": 5
       },
       {
         "kind": "flat",

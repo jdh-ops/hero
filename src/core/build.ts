@@ -1,8 +1,10 @@
-// 캐릭터 빌드(직업 + 착용 장비 + 가방)와 로컬 저장.
+// 캐릭터 빌드(직업 + 착용 장비 + 가방 + 보조 젬)와 로컬 저장.
 import { StatSheet } from './stats';
-import { critChance, expectedDps } from './damage';
+import { averageHit, critChance, expectedDps } from './damage';
 import { itemMods, makeItem, type Item, type Slot } from './items';
-import { CLASSES, SKILLS, type ClassDef } from '../data';
+import { SUPPORT_SOCKETS, canSupport, resolveSkill, type ActiveSkill } from './skills';
+import type { Mod } from './types';
+import { CLASSES, SKILLS, SUPPORTS, type ClassDef } from '../data';
 
 export const BAG_SIZE = 40;
 const SAVE_KEY = 'hero.save';
@@ -12,6 +14,10 @@ export interface Build {
   classId: string;
   equipment: Partial<Record<Slot, Item>>;
   bag: Item[];
+  /** 가진 보조 젬 개수 */
+  gems: Record<string, number>;
+  /** 스킬별 보조 젬 칸 (젬 id 또는 null) */
+  sockets: Record<string, (string | null)[]>;
 }
 
 export interface SaveData extends Build {
@@ -20,17 +26,70 @@ export interface SaveData extends Build {
 }
 
 export function newBuild(classId = 'warrior'): Build {
-  return { classId, equipment: { weapon: makeItem('short_sword', 'normal', 1) }, bag: [] };
+  return {
+    classId,
+    equipment: { weapon: makeItem('short_sword', 'normal', 1) },
+    bag: [],
+    gems: { sup_focus: 1 },
+    sockets: {},
+  };
 }
 
 export function classOf(build: Build): ClassDef {
   return CLASSES[build.classId];
 }
 
-export function statsFor(build: Build, equipment = build.equipment): StatSheet {
+/** 직업 + 장비 수정치 */
+export function baseMods(build: Build, equipment = build.equipment): Mod[] {
   const mods = [...classOf(build).mods];
   for (const item of Object.values(equipment)) if (item) mods.push(...itemMods(item));
-  return new StatSheet(mods);
+  return mods;
+}
+
+export function statsFor(build: Build, equipment = build.equipment): StatSheet {
+  return new StatSheet(baseMods(build, equipment));
+}
+
+// ---------- 스킬과 보조 젬 ----------
+
+export function socketsOf(build: Build, skillId: string): (string | null)[] {
+  const s = build.sockets[skillId] ?? [];
+  return Array.from({ length: SUPPORT_SOCKETS }, (_, i) => s[i] ?? null);
+}
+
+/** 직업의 액티브 스킬들 (보조 젬 반영) */
+export function activeSkills(build: Build, equipment = build.equipment): ActiveSkill[] {
+  const mods = baseMods(build, equipment);
+  return classOf(build).skills.map((id) => {
+    const supports = socketsOf(build, id).filter((g): g is string => !!g).map((g) => SUPPORTS[g]).filter(Boolean);
+    return resolveSkill(SKILLS[id], supports, mods);
+  });
+}
+
+/** 아직 어느 스킬에도 끼우지 않은 젬 개수 */
+export function freeGems(build: Build, gemId: string): number {
+  let used = 0;
+  for (const list of Object.values(build.sockets)) used += list.filter((g) => g === gemId).length;
+  return (build.gems[gemId] ?? 0) - used;
+}
+
+/** 보조 젬 칸에 젬을 끼우거나(gemId) 뺌(null). 성공하면 true */
+export function socketGem(build: Build, skillId: string, index: number, gemId: string | null): boolean {
+  const list = socketsOf(build, skillId);
+  if (index < 0 || index >= list.length) return false;
+  if (gemId) {
+    const sup = SUPPORTS[gemId];
+    if (!sup || !canSupport(SKILLS[skillId], sup)) return false;
+    if (list.includes(gemId)) return false; // 같은 젬을 한 스킬에 두 번은 안 됨
+    if (freeGems(build, gemId) <= 0) return false;
+  }
+  list[index] = gemId;
+  build.sockets[skillId] = list;
+  return true;
+}
+
+export function pickUpGem(build: Build, gemId: string): void {
+  build.gems[gemId] = (build.gems[gemId] ?? 0) + 1;
 }
 
 /** 장비 비교에 쓰는 요약 수치 */
@@ -52,12 +111,12 @@ export interface Summary {
 
 export function summarize(build: Build, stats: StatSheet): Summary {
   const cls = classOf(build);
-  const skill = SKILLS[cls.skills[0]];
   const f = stats.flat;
+  const first = resolveSkill(SKILLS[cls.skills[0]], [], stats.mods);
   return {
     basicDps: expectedDps(stats, SKILLS[cls.basicAttack]),
-    // 스킬 1회 평균 피해 (쿨다운 스킬이라 DPS 대신)
-    skillHit: expectedDps(stats, skill) * skill.useTime / stats.actionSpeed,
+    // 1번 스킬 1회 평균 피해 (쿨다운 스킬이라 DPS 대신, 보조 젬 제외)
+    skillHit: averageHit(first.stats, first.def),
     maxLife: f.maxLife, maxShield: f.maxShield, maxMana: f.maxMana,
     armor: f.armor, evasion: f.evasion,
     resFire: f.resFire, resCold: f.resCold, resLightning: f.resLightning,
@@ -67,7 +126,7 @@ export function summarize(build: Build, stats: StatSheet): Summary {
 
 export const SUMMARY_LABELS: Record<keyof Summary, [string, 'num' | 'pct' | 'mult']> = {
   basicDps: ['기본공격 DPS', 'num'],
-  skillHit: ['스킬 1회 피해', 'num'],
+  skillHit: ['1번 스킬 피해', 'num'],
   maxLife: ['최대 생명력', 'num'],
   maxShield: ['최대 보호막', 'num'],
   maxMana: ['최대 마나', 'num'],
@@ -134,7 +193,14 @@ export function loadBuild(): Build {
     if (raw) {
       const data = JSON.parse(raw) as SaveData;
       if (data.version === SAVE_VERSION && CLASSES[data.classId]) {
-        return { classId: data.classId, equipment: data.equipment ?? {}, bag: data.bag ?? [] };
+        return {
+          classId: data.classId,
+          equipment: data.equipment ?? {},
+          bag: data.bag ?? [],
+          // 4단계 이전 세이브에는 없음
+          gems: data.gems ?? { sup_focus: 1 },
+          sockets: data.sockets ?? {},
+        };
       }
     }
   } catch {

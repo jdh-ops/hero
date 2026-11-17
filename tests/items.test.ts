@@ -40,3 +40,34 @@ describe('장비', () => {
     expect(pickUp(b, makeItem('ring_copper', 'normal', 1))).toBe('full');
   });
 });
+
+import { activeSkills, freeGems, pickUpGem, socketGem } from '../src/core/build';
+import { averageHit } from '../src/core/damage';
+
+describe('보조 젬', () => {
+  it('태그가 맞는 스킬에만, 가진 개수만큼만 끼울 수 있다', () => {
+    const b = newBuild();
+    expect(socketGem(b, 'warrior_whirl', 0, 'sup_multi')).toBe(false); // 투사체 전용
+    expect(socketGem(b, 'warrior_whirl', 0, 'sup_focus')).toBe(true);
+    expect(freeGems(b, 'sup_focus')).toBe(0);
+    expect(socketGem(b, 'warrior_slam', 0, 'sup_focus')).toBe(false); // 하나뿐
+    pickUpGem(b, 'sup_focus');
+    expect(socketGem(b, 'warrior_whirl', 1, 'sup_focus')).toBe(false); // 같은 스킬에 두 번은 안 됨
+    expect(socketGem(b, 'warrior_slam', 0, 'sup_focus')).toBe(true);
+  });
+
+  it('젬 효과가 스킬에 반영된다', () => {
+    const b = newBuild();
+    const before = activeSkills(b);
+    pickUpGem(b, 'sup_multi');
+    pickUpGem(b, 'sup_fire');
+    socketGem(b, 'warrior_whirl', 0, 'sup_focus');
+    socketGem(b, 'warrior_axe', 0, 'sup_multi');
+    socketGem(b, 'warrior_slam', 0, 'sup_fire');
+    const after = activeSkills(b);
+    expect(averageHit(after[0].stats, after[0].def)).toBeCloseTo(averageHit(before[0].stats, before[0].def) * 1.3);
+    expect(after[0].def.manaCost).toBe(Math.round(12 * 1.3));
+    expect(after[2].def.projectiles).toBe(3);
+    expect(averageHit(after[1].stats, after[1].def)).toBeGreaterThan(averageHit(before[1].stats, before[1].def));
+  });
+});
