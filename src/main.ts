@@ -1,5 +1,8 @@
 import Phaser from 'phaser';
 import { GameScene } from './scenes/GameScene';
+import { setupPwa } from './ui/pwa';
+
+setupPwa();
 
 // 화면 방향에 따라 기준 해상도를 바꾼다.
 // 세로(모바일 기본): 480×854, 가로(PC): 960×540. EXPAND 라 남는 쪽은 넓어진다.

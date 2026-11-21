@@ -22,6 +22,7 @@ import { monsterDamageMult, monsterLife } from '../core/scaling';
 import { Joystick } from '../ui/Joystick';
 import { InventoryUI } from '../ui/Inventory';
 import { MapSelectUI } from '../ui/MapSelect';
+import { SettingsUI } from '../ui/Settings';
 
 // 전투 프로토타입
 // 2단계: 이동, 자동 기본공격, 스킬 1개, 몬스터 1종
@@ -75,6 +76,7 @@ export class GameScene extends Phaser.Scene {
   private level = 1;
   private cleared = false;
   private mapSelect?: MapSelectUI;
+  private settings?: SettingsUI;
   private domButtons: HTMLElement[] = [];
   private enemyShots: EnemyShot[] = [];
   /** 이번 판에 얻은 재화 */
@@ -154,8 +156,13 @@ export class GameScene extends Phaser.Scene {
     this.events.once('shutdown', () => {
       this.inventory.destroy();
       this.mapSelect?.destroy();
+      this.settings?.destroy();
+      document.removeEventListener('visibilitychange', this.onVisibility);
       for (const el of this.domButtons) el.remove();
     });
+
+    // 앱이 백그라운드로 갈 때 저장 (휴대폰에서 앱 전환·화면 끄기)
+    document.addEventListener('visibilitychange', this.onVisibility);
 
     if (!this.run) this.openMapSelect();
     else this.addDomButton('지도로', 'leave', () => this.backToMap());
@@ -180,8 +187,36 @@ export class GameScene extends Phaser.Scene {
       () => this.build,
       (run) => this.scene.restart({ run }),
       () => this.inventory.toggle(true),
+      () => this.openSettings(),
     );
   }
+
+  private openSettings() {
+    this.settings?.destroy();
+    this.settings = new SettingsUI(
+      () => this.build,
+      (b) => {
+        // 세이브를 통째로 교체 (지도 화면에서만 열림)
+        persistentBuild = b;
+        this.build = b;
+        this.onBuildChanged();
+        const f = this.stats.flat;
+        this.life = f.maxLife;
+        this.mana = f.maxMana;
+        this.shield = f.maxShield;
+        this.mapSelect?.render();
+      },
+      () => {
+        this.settings?.destroy();
+        this.settings = undefined;
+        this.mapSelect?.render();
+      },
+    );
+  }
+
+  private onVisibility = () => {
+    if (document.visibilityState === 'hidden') saveBuild(this.build);
+  };
 
   private backToMap() {
     saveBuild(this.build);

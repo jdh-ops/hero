@@ -23,12 +23,13 @@
 }
 .maps button:disabled { opacity: 0.4; cursor: default; }
 .maps button:focus-visible { outline: 2px solid var(--inv-accent); outline-offset: 2px; }
-.maps header { display: flex; align-items: center; gap: 14px; }
+.maps header { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
+.maps header button { white-space: nowrap; }
 .maps header h2 { margin: 0; font-size: 20px; }
 .maps header .lv { display: flex; align-items: center; gap: 8px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .maps header .xp { width: 110px; height: 6px; background: #2a303d; border-radius: 3px; overflow: hidden; }
 .maps header .xp i { display: block; height: 100%; background: #b388ff; }
-.maps header button { margin-left: auto; }
+.maps header button[data-act="inv"] { margin-left: auto; }
 
 .maps-tabs { display: flex; flex-wrap: wrap; gap: 6px; }
 .maps-tabs button { display: flex; flex-direction: column; align-items: flex-start; gap: 0; min-width: 84px; font-weight: 600; }

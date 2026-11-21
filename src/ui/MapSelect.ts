@@ -18,6 +18,7 @@ export class MapSelectUI {
     private readonly getBuild: () => Build,
     private readonly onStart: (run: RunConfig) => void,
     private readonly onOpenInventory: () => void,
+    private readonly onOpenSettings: () => void = () => {},
   ) {
     this.root = document.createElement('div');
     this.root.className = 'maps';
@@ -43,6 +44,7 @@ export class MapSelectUI {
       case 'tab': this.tab = d.tab as MapSelectUI['tab']; break;
       case 'tier': this.tier = Math.max(1, Math.min(maxMappingTier(this.getBuild().progress), this.tier + Number(d.delta))); break;
       case 'inv': this.onOpenInventory(); return;
+      case 'settings': this.onOpenSettings(); return;
       case 'start': {
         const run: RunConfig = this.tab === 'mapping'
           ? newMappingRun(d.map!, this.tier)
@@ -92,7 +94,8 @@ export class MapSelectUI {
       <header>
         <h2>지도</h2>
         <div class="lv"><span>Lv.${b.level}</span><span class="xp"><i style="width:${xpPct}%"></i></span></div>
-        <button type="button" data-act="inv">가방·스킬·상점</button>
+        <button type="button" data-act="inv">가방·상점</button>
+        <button type="button" data-act="settings" aria-label="설정">설정</button>
       </header>
       <div class="wallet">${Object.values(CURRENCIES).filter((c) => c.id === 'gold' || (b.wallet[c.id] ?? 0) > 0).map((c) => `<span class="cur" style="--c:#${Number(c.color).toString(16).padStart(6, '0')}">${c.name} <b>${b.wallet[c.id] ?? 0}</b></span>`).join('')}</div>
       <nav class="maps-tabs">${tabs}</nav>

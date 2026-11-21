@@ -200,44 +200,58 @@ export function pickUp(build: Build, item: Item): 'equipped' | 'bag' | 'full' {
 // ---------- 저장 ----------
 
 export function saveBuild(build: Build): void {
-  const data: SaveData = { ...build, version: SAVE_VERSION, savedAt: new Date().toISOString() };
   try {
-    localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+    localStorage.setItem(SAVE_KEY, JSON.stringify(toSaveData(build)));
   } catch {
     // 저장 공간을 못 쓰는 환경(시크릿 창 등)에서는 저장 없이 진행
   }
+}
+
+/** 저장 데이터 → 빌드. 예전 형식도 변환. 잘못된 데이터면 null */
+export function buildFromData(data: SaveData): Build | null {
+  if (!data || data.version !== SAVE_VERSION || !CLASSES[data.classId]) return null;
+  return {
+    classId: data.classId,
+    // 옵션 5티어 체계 이전 장비는 변환
+    equipment: Object.fromEntries(Object.entries(data.equipment ?? {}).map(([s, it]) => [s, it && migrateItem(it)])),
+    bag: (data.bag ?? []).map((it) => migrateItem(it)),
+    // 4단계 이전 세이브에는 없음. 젬 희귀도 도입 전 세이브는 모두 일반 등급으로
+    gems: Object.fromEntries(Object.entries(data.gems ?? { sup_focus: 1 }).map(([k, n]) => [migrateGemKey(k), n])),
+    sockets: Object.fromEntries(Object.entries(data.sockets ?? {}).map(([s, l]) => [s, l.map((g) => (g ? migrateGemKey(g) : null))])),
+    // 5단계 이전 세이브에는 없음
+    level: data.level ?? 1,
+    xp: data.xp ?? 0,
+    progress: { ...newProgress(), ...data.progress, story: { ...newProgress().story, ...data.progress?.story } },
+    // 6단계 이전 세이브에는 없음
+    wallet: migrateWallet(data.wallet ?? { gold: 0 }),
+    talents: data.talents ?? {},
+    skillEnhance: Object.fromEntries(Object.entries(data.skillEnhance ?? {}).map(([k, v]) => [k, { level: v.level }])),
+  };
+}
+
+export function toSaveData(build: Build): SaveData {
+  return { ...build, version: SAVE_VERSION, savedAt: new Date().toISOString() };
 }
 
 export function loadBuild(): Build {
   try {
     const raw = localStorage.getItem(SAVE_KEY);
     if (raw) {
-      const data = JSON.parse(raw) as SaveData;
-      if (data.version === SAVE_VERSION && CLASSES[data.classId]) {
-        return {
-          classId: data.classId,
-          // 옵션 5티어 체계 이전 장비는 변환
-          equipment: Object.fromEntries(Object.entries(data.equipment ?? {}).map(([s, it]) => [s, it && migrateItem(it)])),
-          bag: (data.bag ?? []).map((it) => migrateItem(it)),
-          // 4단계 이전 세이브에는 없음
-          // 젬 희귀도 도입 전 세이브는 모두 일반 등급으로
-          gems: Object.fromEntries(Object.entries(data.gems ?? { sup_focus: 1 }).map(([k, n]) => [migrateGemKey(k), n])),
-          sockets: Object.fromEntries(Object.entries(data.sockets ?? {}).map(([s, l]) => [s, l.map((g) => (g ? migrateGemKey(g) : null))])),
-          // 5단계 이전 세이브에는 없음
-          level: data.level ?? 1,
-          xp: data.xp ?? 0,
-          progress: { ...newProgress(), ...data.progress, story: { ...newProgress().story, ...data.progress?.story } },
-          // 6단계 이전 세이브에는 없음
-          wallet: migrateWallet(data.wallet ?? { gold: 0 }),
-          talents: data.talents ?? {},
-          skillEnhance: Object.fromEntries(Object.entries(data.skillEnhance ?? {}).map(([k, v]) => [k, { level: v.level }])),
-        };
-      }
+      const b = buildFromData(JSON.parse(raw) as SaveData);
+      if (b) return b;
     }
   } catch {
     // 손상된 세이브는 무시하고 새로 시작
   }
   return newBuild();
+}
+
+/** 세이브 코드 불러오기 전 지금 세이브를 따로 보관 */
+export function backupSave(): void {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (raw) localStorage.setItem(`${SAVE_KEY}.backup`, raw);
+  } catch { /* 무시 */ }
 }
 
 export function resetSave(): Build {

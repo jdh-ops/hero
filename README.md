@@ -28,3 +28,9 @@ npm run build:single  # dist-single/index.html 한 파일짜리 미리보기
 
 `main`에 푸시하면 GitHub Actions가 GitHub Pages로 배포한다.
 처음 한 번은 저장소 Settings → Pages → Source를 **GitHub Actions**로 바꿔야 한다.
+
+## 저장 · 설치
+
+- 저장: 브라우저(localStorage)에 자동 저장 (변경 시, 앱이 백그라운드로 갈 때)
+- 지도 화면 → 설정: 세이브 코드 내보내기/불러오기(텍스트 백업), 새로 시작 (이전 세이브는 `hero.save.backup` 에 백업)
+- PWA: `public/manifest.webmanifest`, `public/sw.js` (배포본에서 오프라인 플레이), 아이콘 `public/icons/`
