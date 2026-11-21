@@ -114,5 +114,15 @@
   "perTier": 3,
   "maxTier": 10
  },
- "killTarget": 60
+ "killTarget": 120,
+ "balance": {
+  "lifeQuad": 0.006,
+  "damageQuad": 0.0007,
+  "spawnInterval": 0.85,
+  "doubleSpawnChance": 0.4,
+  "xpBase": 2.2,
+  "xpExp": 1.25,
+  "xpToNextBase": 24,
+  "xpToNextExp": 1.8
+ }
 }

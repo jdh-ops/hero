@@ -86,6 +86,20 @@ export interface MapsData {
   story: { id: string; name: string; levels: number[] }[];
   mapping: { baseLevel: number; perTier: number; maxTier: number };
   killTarget: number;
+  /** 밸런스 조정값 (scripts/balance.ts 로 확인) */
+  balance: {
+    /** 몬스터 체력·피해 = 기본 × (1 + 레벨당 × (L−1) + quad × (L−1)²) */
+    lifeQuad: number;
+    damageQuad: number;
+    /** 몬스터 출현 간격(초)과 한 번에 2마리 나올 확률 */
+    spawnInterval: number;
+    doubleSpawnChance: number;
+    /** 몬스터 경험치 = xpBase × 레벨^xpExp, 다음 레벨까지 = xpToNextBase × 레벨^xpToNextExp */
+    xpBase: number;
+    xpExp: number;
+    xpToNextBase: number;
+    xpToNextExp: number;
+  };
 }
 
 export const SKILLS = skillsJson as unknown as Record<string, SkillDef>;

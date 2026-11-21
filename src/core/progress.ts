@@ -140,12 +140,12 @@ export const MAX_LEVEL = 60;
 
 /** 다음 레벨까지 필요한 경험치 */
 export function xpToNext(level: number): number {
-  return Math.round(20 * Math.pow(level, 1.7));
+  return Math.round(MAPS.balance.xpToNextBase * Math.pow(level, MAPS.balance.xpToNextExp));
 }
 
 /** 몬스터 1마리 경험치. 내 레벨이 지역보다 많이 높으면 줄어듦 */
 export function monsterXp(monsterLevel: number, xpMult: number, playerLevel: number): number {
-  const base = 4 * Math.pow(monsterLevel, 1.25) * xpMult;
+  const base = MAPS.balance.xpBase * Math.pow(monsterLevel, MAPS.balance.xpExp) * xpMult;
   const gap = Math.max(0, playerLevel - monsterLevel - 3);
   return base * Math.max(0.1, 1 - gap * 0.15);
 }

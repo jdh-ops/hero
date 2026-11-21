@@ -18,6 +18,7 @@ import { GEM_RARITIES, GEM_RARITY_COLOR, gemKey, gemName, parseGem } from '../co
 import { formatCost, gain, rollBossCurrency, rollCurrency, rollGold, type Wallet } from '../core/economy';
 import { mappingUnlocked } from '../core/progress';
 import { CURRENCIES, ECONOMY } from '../data';
+import { monsterDamageMult, monsterLife } from '../core/scaling';
 import { Joystick } from '../ui/Joystick';
 import { InventoryUI } from '../ui/Inventory';
 import { MapSelectUI } from '../ui/MapSelect';
@@ -392,8 +393,8 @@ export class GameScene extends Phaser.Scene {
     if (this.cleared || this.bossSpawned) return;
     this.spawnTimer -= dt;
     if (this.spawnTimer > 0) return;
-    this.spawnTimer = 1.0;
-    const count = Math.random() < 0.35 ? 2 : 1;
+    this.spawnTimer = MAPS.balance.spawnInterval;
+    const count = Math.random() < MAPS.balance.doubleSpawnChance ? 2 : 1;
     for (let i = 0; i < count; i++) this.spawnMonster();
   }
 
@@ -418,7 +419,7 @@ export class GameScene extends Phaser.Scene {
     m.setCircle(def.radius, 2, 2);
     m.def = def;
     m.level = this.monsterLevel();
-    m.maxLife = def.life * (1 + def.lifePerLevel * (m.level - 1));
+    m.maxLife = monsterLife(def, m.level);
     m.life = m.maxLife;
     m.attackCd = def.attackInterval;
     m.setAlpha(0);
@@ -439,7 +440,7 @@ export class GameScene extends Phaser.Scene {
     m.setDepth(6).setCircle(def.radius, 2, 2);
     m.def = def;
     m.level = this.monsterLevel();
-    m.maxLife = def.life * (1 + def.lifePerLevel * (m.level - 1));
+    m.maxLife = monsterLife(def, m.level);
     m.life = m.maxLife;
     m.attackCd = def.attackInterval;
     m.patternCd = 2;
@@ -569,7 +570,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private monsterHit(m: Monster): Hit {
-    const scale = 1 + m.def.damagePerLevel * (m.level - 1);
+    const scale = monsterDamageMult(m.def, m.level);
     const amounts = { physical: 0, fire: 0, cold: 0, lightning: 0 };
     amounts[m.def.damageType] = Phaser.Math.FloatBetween(m.def.damageMin, m.def.damageMax) * scale;
     return { amounts, crit: false, evadable: true, attackerLevel: m.level };
