@@ -34,6 +34,8 @@ const PLAYER_RADIUS = 16;
 const MAX_MONSTERS = 35;
 const GEM_COLOR = 0x66d17a;
 const PICKUP_RADIUS = 50;
+/** 입장 후 첫 몬스터가 나오기까지(초) */
+const START_GRACE = 1.5;
 const RARITY_COLOR: Record<Rarity, number> = { normal: 0xc9ccd2, magic: 0x7aa7ff, rare: 0xffd54f };
 
 /** 장비는 씬을 다시 시작해도(죽어도) 유지 */
@@ -239,7 +241,8 @@ export class GameScene extends Phaser.Scene {
     this.sinceHit = 99;
     this.actionCd = 0;
     this.elapsed = 0;
-    this.spawnTimer = 0;
+    // 입장 직후 잠깐은 몬스터가 나오지 않게
+    this.spawnTimer = START_GRACE;
     this.kills = 0;
     this.dead = false;
     this.floats = [];
@@ -395,10 +398,10 @@ export class GameScene extends Phaser.Scene {
   }
 
   private spawnMonster() {
-    const cam = this.cameras.main.worldView;
-    // 화면 바로 바깥 무작위 지점
+    // 화면 바로 바깥 무작위 지점.
+    // worldView 는 첫 프레임에 아직 0 이라 화면 크기(scale)로 계산해야 몬스터가 바로 옆에 생기지 않는다
     const angle = Math.random() * Math.PI * 2;
-    const dist = Math.hypot(cam.width, cam.height) / 2 + 40;
+    const dist = Math.hypot(this.scale.width, this.scale.height) / 2 + 40;
     const x = Phaser.Math.Clamp(this.player.x + Math.cos(angle) * dist, 20, WORLD - 20);
     const y = Phaser.Math.Clamp(this.player.y + Math.sin(angle) * dist, 20, WORLD - 20);
 
