@@ -8,7 +8,7 @@ import {
   AFFIXES, AFFIX_RARITY_NAMES, RARITY_NAMES, SLOTS, SLOT_NAMES, BASES, affixMod, describeMod, implicitMods, itemTitle, maxTierFor, type Item,
 } from '../core/items';
 import {
-  MAX_SKILL_ENHANCE, canBoost, formatCost, gain, has, rerollCost, rollSalvage, salvageGemReward, salvageItemReward, shopPrice, shopRoll,
+  MAX_SKILL_ENHANCE, canBoost, itemMaxTier, formatCost, gain, has, rerollCost, rollSalvage, salvageGemReward, salvageItemReward, shopPrice, shopRoll,
   skillEnhanceChance, skillEnhanceCost, spend, tryEnhanceSkill, tryReroll, type EnhanceResult, type Wallet,
 } from '../core/economy';
 import { branchPoints, canRankUp, rankUp, spentPoints, totalPoints } from '../core/talents';
@@ -467,7 +467,7 @@ export class InventoryUI {
         const bc = rerollCost(item, true);
         btns.push(`<button type="button" class="gold" data-act="reroll" data-boost="1" ${has(b.wallet, bc) ? '' : 'disabled'}>금괴 굴리기 (${formatCost(bc)})</button>`);
       }
-      reroll = `<p class="dim">${this.affixPick + 1}번째 옵션을 다시 굴립니다.${canBoost(item) ? ' 금괴 굴리기는 희귀 옵션과 높은 티어가 훨씬 잘 나옵니다.' : ''}</p>
+      reroll = `<p class="dim">${this.affixPick + 1}번째 옵션을 다시 굴립니다. 이 장비(아이템 레벨 ${item.ilvl})에는 최고 T${itemMaxTier(item)} 옵션까지 붙습니다.${canBoost(item) ? ' 금괴 굴리기는 희귀 옵션과 높은 티어가 훨씬 잘 나옵니다.' : ''}</p>
         <div class="inv-actions">${btns.join('')}</div>`;
     }
 

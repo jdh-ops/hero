@@ -48,12 +48,14 @@ describe('재화', () => {
 });
 
 describe('장비 옵션 굴리기', () => {
-  it('등급에 맞는 강화석 + 금화, 희귀는 금괴 굴리기 가능', () => {
-    expect(Object.keys(rerollCost(makeItem('ring_copper', 'normal', 5), false))).toEqual(['stone_common', 'gold']);
-    expect(Object.keys(rerollCost(makeItem('ring_copper', 'magic', 5), false))).toEqual(['stone_uncommon', 'gold']);
-    expect(rerollCost(makeItem('ring_copper', 'rare', 5), true)).toEqual({ stone_rare: 1, gold_bar: 1 });
+  it('비용은 장비 등급이 아니라 붙을 수 있는 최고 티어(아이템 레벨)에 따름', () => {
+    // T5·T4 (Lv 1~15) 일반, T3·T2 (16~37) 고급, T1 (38~) 희귀
+    expect(Object.keys(rerollCost(makeItem('ring_copper', 'rare', 5), false))).toEqual(['stone_common', 'gold']);
+    expect(Object.keys(rerollCost(makeItem('ring_copper', 'normal', 20), false))).toEqual(['stone_uncommon', 'gold']);
+    expect(Object.keys(rerollCost(makeItem('ring_copper', 'normal', 40), false))).toEqual(['stone_rare', 'gold']);
+    expect(rerollCost(makeItem('ring_copper', 'magic', 40), true)).toEqual({ stone_rare: 1, gold_bar: 1 });
     const w = { stone_common: 1, gold_bar: 5 };
-    expect(tryReroll(w, makeItem('ring_copper', 'normal', 5), 0, true)).toBe('invalid');
+    expect(tryReroll(w, makeItem('ring_copper', 'rare', 5), 0, true)).toBe('invalid'); // T1 이 안 붙는 장비는 금괴 굴리기 불가
     expect(tryReroll(w, makeItem('ring_copper', 'normal', 5), 0, false)).toBe('no-money');
   });
 

@@ -128,8 +128,11 @@ export interface CurrencyDef {
 export interface EconomyData {
   /** 스킬 강화: 단계별 성공 확률과 재료 (+0→+1 이 [0]) */
   skill: { perLevel: number; chances: number[]; costs: Record<string, number>[] };
-  /** 장비 옵션 굴리기: 등급별 강화석, 금화 = 기본 + 아이템 레벨 × n, 금괴 굴림 비용 */
-  reroll: { stone: Record<'normal' | 'magic' | 'rare', string>; goldBase: number; goldPerIlvl: number; goldBar: number };
+  /**
+   * 장비 옵션 굴리기: 그 장비에 붙을 수 있는 최고 티어(아이템 레벨로 정해짐)별 강화석,
+   * 금화 = 기본 + 아이템 레벨 × n, 금괴 굴림은 최고 티어가 boostTier 이상일 때
+   */
+  reroll: { stone: Record<string, string>; goldBase: number; goldPerIlvl: number; goldBar: number; boostTier: number };
   /** 분해: 성공 확률, 등급별 보상 */
   salvage: {
     chance: number;

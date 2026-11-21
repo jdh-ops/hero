@@ -116,12 +116,15 @@
  },
  "reroll": {
   "stone": {
-   "normal": "stone_common",
-   "magic": "stone_uncommon",
-   "rare": "stone_rare"
+   "5": "stone_common",
+   "4": "stone_common",
+   "3": "stone_uncommon",
+   "2": "stone_uncommon",
+   "1": "stone_rare"
   },
   "goldBase": 20,
   "goldPerIlvl": 3,
-  "goldBar": 1
+  "goldBar": 1,
+  "boostTier": 1
  }
 }
