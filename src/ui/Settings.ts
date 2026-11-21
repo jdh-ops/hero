@@ -18,10 +18,20 @@ export class SettingsUI {
     /** 세이브를 통째로 바꿀 때 (불러오기·새로 시작) */
     private readonly onReplace: (build: Build) => void,
     private readonly onClose: () => void,
+    /** 편의 설정이 바뀌면 저장 */
+    private readonly onPrefs: () => void = () => {},
   ) {
     this.root = document.createElement('div');
     this.root.className = 'settings';
     this.root.addEventListener('click', (e) => void this.onClick(e));
+    this.root.addEventListener('change', (e) => {
+      const el = e.target as HTMLInputElement;
+      const prefs = this.getBuild().prefs;
+      if (el.name === 'loot-min') prefs.lootMin = el.value as typeof prefs.lootMin;
+      else if (el.name === 'auto-salvage') prefs.autoSalvage = el.checked;
+      else return;
+      this.onPrefs();
+    });
     document.body.append(this.root);
     this.render();
   }
@@ -104,6 +114,14 @@ export class SettingsUI {
       <div class="settings-box" role="dialog" aria-label="설정">
         <header><h2>설정</h2><button type="button" data-act="close">닫기</button></header>
         <p class="settings-msg" aria-live="polite">${esc(this.msg)}</p>
+
+        <section>
+          <h3>줍기 필터</h3>
+          <p class="dim">고른 등급보다 낮은 장비는 바닥에 떨어지지 않습니다. 보조 젬·재화는 항상 떨어집니다.</p>
+          <div class="radios">${([['normal', '모두 줍기'], ['magic', '고급 이상만'], ['rare', '희귀만']] as const).map(([v, t]) =>
+            `<label><input type="radio" name="loot-min" value="${v}" ${b.prefs.lootMin === v ? 'checked' : ''}> ${t}</label>`).join('')}</div>
+          <label class="chk"><input type="checkbox" name="auto-salvage" ${b.prefs.autoSalvage ? 'checked' : ''}> 걸러진 장비는 자동 분해 (50% 확률로 강화석)</label>
+        </section>
 
         <section>
           <h3>세이브 코드 내보내기</h3>

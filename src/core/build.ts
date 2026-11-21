@@ -32,7 +32,23 @@ export interface Build {
   talents: TalentRanks;
   /** 스킬 강화 단계 */
   skillEnhance: Record<string, { level: number }>;
+  /** 편의 설정 */
+  prefs: Prefs;
 }
+
+export type BagSort = 'recent' | 'rarity' | 'slot' | 'ilvl';
+
+export interface Prefs {
+  /** 이 등급 미만 장비는 줍지 않음 */
+  lootMin: 'normal' | 'magic' | 'rare';
+  /** 걸러진 장비를 자동 분해(50%)해서 강화석으로 */
+  autoSalvage: boolean;
+  bagSort: BagSort;
+  /** 이미 본 안내 */
+  seenTips: string[];
+}
+
+export const defaultPrefs = (): Prefs => ({ lootMin: 'normal', autoSalvage: true, bagSort: 'recent', seenTips: [] });
 
 export interface SaveData extends Build {
   version: number;
@@ -52,6 +68,7 @@ export function newBuild(classId = 'warrior'): Build {
     wallet: { gold: 0 },
     talents: {},
     skillEnhance: {},
+    prefs: defaultPrefs(),
   };
 }
 
@@ -226,6 +243,7 @@ export function buildFromData(data: SaveData): Build | null {
     wallet: migrateWallet(data.wallet ?? { gold: 0 }),
     talents: data.talents ?? {},
     skillEnhance: Object.fromEntries(Object.entries(data.skillEnhance ?? {}).map(([k, v]) => [k, { level: v.level }])),
+    prefs: { ...defaultPrefs(), ...data.prefs },
   };
 }
 
@@ -257,4 +275,33 @@ export function backupSave(): void {
 export function resetSave(): Build {
   try { localStorage.removeItem(SAVE_KEY); } catch { /* 무시 */ }
   return newBuild();
+}
+
+// ---------- 편의 ----------
+
+const RARITY_RANK = { normal: 0, magic: 1, rare: 2 } as const;
+
+/** 줍기 필터를 통과하는지 */
+export function passesLootFilter(prefs: Prefs, item: Item): boolean {
+  return RARITY_RANK[item.rarity] >= RARITY_RANK[prefs.lootMin];
+}
+
+const SLOT_ORDER: Record<string, number> = { weapon: 0, helmet: 1, chest: 2, boots: 3, ring: 4 };
+
+/** 가방 표시 순서 (가방 배열 자체는 얻은 순서 그대로) */
+export function sortedBag(bag: Item[], sort: BagSort): Item[] {
+  const list = [...bag];
+  switch (sort) {
+    case 'recent': return list.reverse();
+    case 'rarity': return list.sort((a, b) => RARITY_RANK[b.rarity] - RARITY_RANK[a.rarity] || b.ilvl - a.ilvl);
+    case 'slot': return list.sort((a, b) => SLOT_ORDER[a.slot] - SLOT_ORDER[b.slot] || RARITY_RANK[b.rarity] - RARITY_RANK[a.rarity]);
+    case 'ilvl': return list.sort((a, b) => b.ilvl - a.ilvl || RARITY_RANK[b.rarity] - RARITY_RANK[a.rarity]);
+  }
+}
+
+/** 처음 한 번만 보여 줄 안내. 처음이면 true 를 돌려주고 본 것으로 표시 */
+export function firstTime(build: Build, id: string): boolean {
+  if (build.prefs.seenTips.includes(id)) return false;
+  build.prefs.seenTips.push(id);
+  return true;
 }

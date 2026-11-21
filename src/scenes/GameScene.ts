@@ -5,7 +5,8 @@ import {
   type Defender, type Hit,
 } from '../core/damage';
 import type { SkillDef } from '../core/types';
-import { activeSkills, classOf, loadBuild, pickUp, pickUpGem, saveBuild, statsFor, type Build } from '../core/build';
+import { activeSkills, classOf, firstTime, loadBuild, passesLootFilter, pickUp, pickUpGem, saveBuild, statsFor, type Build } from '../core/build';
+import { clearTips, showIntro, showTip } from '../ui/Tips';
 import type { ActiveSkill } from '../core/skills';
 import type { StatSheet as Sheet } from '../core/stats';
 import { generateItem, type Item, type Rarity } from '../core/items';
@@ -15,7 +16,7 @@ import {
   type RunConfig,
 } from '../core/progress';
 import { GEM_RARITIES, GEM_RARITY_COLOR, gemKey, gemName, parseGem } from '../core/gems';
-import { formatCost, gain, rollBossCurrency, rollCurrency, rollGold, type Wallet } from '../core/economy';
+import { formatCost, gain, rollBossCurrency, rollCurrency, rollGold, rollSalvage, salvageItemReward, type Wallet } from '../core/economy';
 import { mappingUnlocked } from '../core/progress';
 import { CURRENCIES, ECONOMY } from '../data';
 import { monsterDamageMult, monsterLife } from '../core/scaling';
@@ -158,6 +159,7 @@ export class GameScene extends Phaser.Scene {
       this.mapSelect?.destroy();
       this.settings?.destroy();
       document.removeEventListener('visibilitychange', this.onVisibility);
+      clearTips();
       for (const el of this.domButtons) el.remove();
     });
 
@@ -165,7 +167,15 @@ export class GameScene extends Phaser.Scene {
     document.addEventListener('visibilitychange', this.onVisibility);
 
     if (!this.run) this.openMapSelect();
-    else this.addDomButton('지도로', 'leave', () => this.backToMap());
+    else {
+      this.addDomButton('지도로', 'leave', () => this.backToMap());
+      if (firstTime(this.build, 'intro')) {
+        saveBuild(this.build);
+        // 안내를 읽는 동안 멈춤
+        this.domButtons.push(showIntro(this.sys.game.device.input.touch, () => this.scene.resume()));
+        this.scene.pause();
+      }
+    }
 
     // 테스트용: 주소에 ?debug 가 있으면 콘솔에서 씬에 접근 가능
     if (new URLSearchParams(location.search).has('debug')) (window as unknown as { hero: GameScene }).hero = this;
@@ -211,6 +221,7 @@ export class GameScene extends Phaser.Scene {
         this.settings = undefined;
         this.mapSelect?.render();
       },
+      () => saveBuild(this.build),
     );
   }
 
@@ -482,6 +493,7 @@ export class GameScene extends Phaser.Scene {
     (m.body as Phaser.Physics.Arcade.Body).pushable = false;
     this.boss = m;
     this.floatText(this.player.x, this.player.y - 70, `보스 등장: ${def.name}`, '#ffd54f', true);
+    this.tip('first-boss', '<b>보스</b>가 나왔습니다. 바닥에 표시가 뜨면 그 자리를 피하세요.');
     this.cameras.main.flash(250, 80, 20, 20);
   }
 
@@ -817,7 +829,7 @@ export class GameScene extends Phaser.Scene {
       const bt = bossDropTableFor(this.run);
       for (let i = 0; i < bt.items; i++) {
         const a = (Math.PI * 2 * i) / bt.items;
-        this.spawnDrop(x + Math.cos(a) * 40, y + Math.sin(a) * 40, generateItem(m.level, Math.random, rollItemRarity(bt)));
+        this.dropLoot(x + Math.cos(a) * 40, y + Math.sin(a) * 40, generateItem(m.level, Math.random, rollItemRarity(bt)));
       }
       if (Math.random() < bt.gemChance) this.spawnGemDrop(x, y, rollGem(bt));
       const bundle = rollBossCurrency(bt);
@@ -832,7 +844,7 @@ export class GameScene extends Phaser.Scene {
       m.destroy();
     } else {
       const table = dropTableFor(this.run);
-      if (Math.random() < table.itemChance) this.spawnDrop(x, y, generateItem(m.level, Math.random, rollItemRarity(table)));
+      if (Math.random() < table.itemChance) this.dropLoot(x, y, generateItem(m.level, Math.random, rollItemRarity(table)));
       if (Math.random() < table.gemChance) this.spawnGemDrop(x + 14, y + 6, rollGem(table));
       this.addGold(rollGold(table, m.level));
       const cur = rollCurrency(table);
@@ -847,6 +859,7 @@ export class GameScene extends Phaser.Scene {
       this.life = f.maxLife;
       this.mana = f.maxMana;
       this.floatText(this.player.x, this.player.y - 56, `레벨 업! Lv.${this.build.level}`, '#d1b3ff', true);
+      this.tip('first-level', '레벨이 올라 <b>특성 포인트</b>가 생겼습니다. 가방 → 특성 탭에서 찍으세요.');
     }
     if (m.def.kind === 'boss') this.checkClear(true);
     else if (!this.bossSpawned && this.kills >= MAPS.killTarget) this.spawnBoss();
@@ -887,6 +900,22 @@ export class GameScene extends Phaser.Scene {
   }
 
   // ---------- 드랍 / 줍기 ----------
+
+  /** 줍기 필터: 걸러진 장비는 떨어뜨리지 않고, 설정에 따라 자동 분해(50%) */
+  private dropLoot(x: number, y: number, item: Item) {
+    const prefs = this.build.prefs;
+    if (passesLootFilter(prefs, item)) { this.spawnDrop(x, y, item); return; }
+    if (!prefs.autoSalvage) return;
+    const got = rollSalvage(salvageItemReward(item));
+    gain(this.build.wallet, got);
+    gain(this.runGains, got);
+  }
+
+  private tip(id: string, html: string) {
+    if (!firstTime(this.build, id)) return;
+    showTip(html);
+    saveBuild(this.build);
+  }
 
   private spawnDrop(x: number, y: number, item: Item) {
     const color = RARITY_COLOR[item.rarity];
@@ -947,6 +976,7 @@ export class GameScene extends Phaser.Scene {
       }
       if (d.gemId) {
         pickUpGem(this.build, d.gemId);
+        this.tip('first-gem', '<b>보조 젬</b>을 얻었습니다. 가방 → 스킬 탭에서 스킬 칸에 끼우세요.');
         this.floatText(this.player.x, this.player.y - 40, `보조 젬: ${gemName(d.gemId)}`, GEM_RARITY_COLOR[parseGem(d.gemId)?.rarity ?? 'common']);
         d.gem.destroy();
         d.label.destroy();
@@ -967,6 +997,8 @@ export class GameScene extends Phaser.Scene {
       this.floatText(this.player.x, this.player.y - 40, result === 'equipped' ? `${item.name} 착용` : item.name, color);
       d.gem.destroy();
       d.label.destroy();
+      if (result === 'equipped') this.tip('first-equip', '빈 칸이라 <b>바로 착용</b>했습니다.');
+      else this.tip('first-item', '장비를 주웠습니다. <b>가방</b>에서 공격▲ 방어▲ 표시를 보고 바꿔 끼우세요.');
       if (result === 'equipped') this.onBuildChanged();
       else { saveBuild(this.build); this.inventory.refreshButton(); }
       return false;

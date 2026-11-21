@@ -1,7 +1,7 @@
 // 가방·장비 창. 게임 캔버스 위에 HTML로 띄운다.
 import './inventory.css';
 import {
-  BAG_SIZE, SUMMARY_LABELS, activeSkills, discard, equipFromBag, freeGems, socketGem, socketsOf, statsFor, summarize, unequip,
+  BAG_SIZE, SUMMARY_LABELS, sortedBag, type BagSort, activeSkills, discard, equipFromBag, freeGems, socketGem, socketsOf, statsFor, summarize, unequip,
   type Build, type Summary,
 } from '../core/build';
 import {
@@ -16,6 +16,7 @@ import { CURRENCIES, ECONOMY, TALENTS } from '../data';
 import { canSupport, skillNumbers } from '../core/skills';
 import type { Tag } from '../core/types';
 import { SKILLS, SUPPORTS } from '../data';
+import { clearTips } from './Tips';
 import { GEM_RARITIES, GEM_RARITY_KO, describeGem, gemKey, parseGem } from '../core/gems';
 
 const TAG_KO: Record<Tag, string> = {
@@ -32,15 +33,13 @@ function fmt(v: number, unit: 'num' | 'pct' | 'mult'): string {
   return v >= 100 ? String(Math.round(v)) : String(+v.toFixed(1));
 }
 
-/** 바꿨을 때 전체적으로 나아지는지 (각 수치의 변화율 합) */
-function isUpgrade(cur: Summary, next: Summary): boolean {
-  let score = 0;
-  for (const k of Object.keys(cur) as (keyof Summary)[]) {
-    const a = cur[k], b = next[k];
-    if (a === b) continue;
-    score += (b - a) / Math.max(Math.abs(a), 1);
-  }
-  return score > 0.001;
+const OFFENSE: (keyof Summary)[] = ['basicDps', 'skillHit'];
+const DEFENSE: (keyof Summary)[] = ['maxLife', 'maxShield', 'armor', 'evasion', 'resFire', 'resCold', 'resLightning'];
+
+/** 바꿨을 때 공격 / 방어가 나아지는지 (그 묶음 수치의 변화율 합) */
+function upgradeKinds(cur: Summary, next: Summary): { off: boolean; def: boolean } {
+  const score = (keys: (keyof Summary)[]) => keys.reduce((s, k) => s + (next[k] - cur[k]) / Math.max(Math.abs(cur[k]), 1), 0);
+  return { off: score(OFFENSE) > 0.005, def: score(DEFENSE) > 0.005 };
 }
 
 export class InventoryUI {
@@ -75,6 +74,14 @@ export class InventoryUI {
     this.root.className = 'inv';
     this.root.hidden = true;
     this.root.addEventListener('click', (e) => this.onClick(e));
+    this.root.addEventListener('change', (e) => {
+      const el = e.target as HTMLSelectElement;
+      if (el.dataset.change === 'sort') {
+        this.getBuild().prefs.bagSort = el.value as BagSort;
+        this.onChange();
+        this.render();
+      }
+    });
 
     document.body.append(this.button, this.root);
     window.addEventListener('keydown', this.onKey);
@@ -96,7 +103,7 @@ export class InventoryUI {
     if (open === this.isOpen) return;
     this.root.hidden = !open;
     this.button.hidden = open;
-    if (open) this.render();
+    if (open) { clearTips(); this.render(); }
     this.onToggle(open);
   }
 
@@ -284,11 +291,13 @@ export class InventoryUI {
       let up = '';
       if (where === 'bag') {
         const next = summarize(b, statsFor(b, { ...b.equipment, [item.slot]: item }));
-        if (isUpgrade(cur, next)) up = '<span class="up" title="착용하면 더 좋아짐">▲</span>';
+        const k = upgradeKinds(cur, next);
+        const tags = [k.off ? '<i class="off">공격▲</i>' : '', k.def ? '<i class="def">방어▲</i>' : ''].join('');
+        if (tags) up = `<span class="up" title="착용하면 좋아지는 쪽">${tags}</span>`;
       }
       const isSel = sel?.uid === item.uid ? ' selected' : '';
       return `<button type="button" class="inv-tile r-${item.rarity}${isSel}" data-act="select" data-where="${where}" data-uid="${item.uid}">
-        ${up}<span class="slot">${SLOT_NAMES[item.slot]} · Lv.${item.ilvl}</span><span class="name">${esc(itemTitle(item))}</span></button>`;
+        <span class="slot">${SLOT_NAMES[item.slot]} · Lv.${item.ilvl}</span><span class="name">${esc(itemTitle(item))}</span>${up}</button>`;
     };
 
     const slots = SLOTS.map((s) => {
@@ -301,12 +310,16 @@ export class InventoryUI {
       .map((k) => `<dt>${SUMMARY_LABELS[k][0]}</dt><dd>${fmt(cur[k], SUMMARY_LABELS[k][1])}</dd>`).join('');
 
     const bag = b.bag.length
-      ? `<div class="inv-bag">${b.bag.map((i) => tile(i, 'bag')).join('')}</div>`
+      ? `<div class="inv-bag">${sortedBag(b.bag, b.prefs.bagSort).map((i) => tile(i, 'bag')).join('')}</div>`
       : '<p class="inv-empty">비어 있음. 몬스터를 처치하면 장비가 떨어집니다.</p>';
 
     this.root.innerHTML = `${header}
       <section><h3>착용 중</h3><div class="inv-slots">${slots}</div><dl class="inv-stats wide-only">${statRows}</dl></section>
-      <section><h3 class="row">가방 ${b.bag.length}/${BAG_SIZE}<button type="button" class="mini" data-act="salvage-normal">일반 모두 분해</button></h3>${bag}</section>
+      <section><h3 class="row">가방 ${b.bag.length}/${BAG_SIZE}
+        <select class="mini-select" data-change="sort" aria-label="가방 정렬">${(
+          [['recent', '최근 순'], ['rarity', '등급 순'], ['slot', '부위 순'], ['ilvl', '레벨 순']] as const
+        ).map(([v, t]) => `<option value="${v}" ${b.prefs.bagSort === v ? 'selected' : ''}>${t}</option>`).join('')}</select>
+        <button type="button" class="mini" data-act="salvage-normal">일반 모두 분해</button></h3>${bag}</section>
       <section class="narrow-only"><h3>능력치</h3><dl class="inv-stats">${statRows}</dl></section>
       <section class="inv-detail">${sel ? this.detail(b, sel, cur) : '<p class="inv-empty">장비를 누르면 옵션과 비교가 보입니다.</p>'}</section>`;
   }
